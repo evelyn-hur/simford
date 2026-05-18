@@ -2,13 +2,16 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { ChatMessage } from "@/lib/conversations";
+import MemoryPanel, { type MemoryUsed } from "@/components/MemoryPanel";
 
 export default function ChatClient({
   npcId,
+  npcName,
   conversationId,
   initialMessages,
 }: {
   npcId: string;
+  npcName: string;
   conversationId: string;
   initialMessages: ChatMessage[];
 }) {
@@ -16,6 +19,7 @@ export default function ChatClient({
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [memoriesUsed, setMemoriesUsed] = useState<MemoryUsed[]>([]);
 
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -43,16 +47,20 @@ export default function ChatClient({
         }),
       });
 
-      const data = (await res.json()) as { reply?: string; error?: string };
+      const data = (await res.json()) as {
+        response?: string;
+        reply?: string;
+        memoriesUsed?: MemoryUsed[];
+        error?: string;
+      };
 
-      if (!res.ok || !data.reply) {
+      const npcText = data.response ?? data.reply;
+      if (!res.ok || !npcText) {
         throw new Error(data.error ?? "Something went wrong");
       }
 
-      setMessages((prev) => [
-        ...prev,
-        { role: "npc", content: data.reply as string },
-      ]);
+      setMessages((prev) => [...prev, { role: "npc", content: npcText }]);
+      setMemoriesUsed(data.memoriesUsed ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -68,7 +76,9 @@ export default function ChatClient({
   }
 
   return (
-    <div className="flex flex-1 flex-col">
+    <div className="flex min-h-0 flex-1 flex-col gap-4 pt-4 lg:flex-row">
+      {/* Chat column */}
+      <div className="flex min-w-0 flex-1 flex-col">
       {/* Message list */}
       <div className="flex-1 space-y-4 overflow-y-auto px-1 py-6">
         {messages.length === 0 && (
@@ -135,6 +145,9 @@ export default function ChatClient({
           Send
         </button>
       </div>
+      </div>
+
+      <MemoryPanel npcName={npcName} memories={memoriesUsed} />
     </div>
   );
 }

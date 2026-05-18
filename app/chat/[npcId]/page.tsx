@@ -52,6 +52,7 @@ export default async function ChatPage({
 
       <ChatClient
         npcId={npc.id}
+        npcName={npc.name}
         conversationId={conversationId}
         initialMessages={initialMessages}
       />
