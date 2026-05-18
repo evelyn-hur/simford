@@ -3,8 +3,8 @@ import "./globals.css";
 import Header from "@/components/Header";
 
 export const metadata: Metadata = {
-  title: "Stanford Society",
-  description: "Stanford Society app",
+  title: "Simford",
+  description: "Simford app",
 };
 
 export default function RootLayout({

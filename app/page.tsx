@@ -28,7 +28,7 @@ export default async function Home() {
     <div className="space-y-8">
       <header className="space-y-2">
         <h1 className="text-3xl font-semibold tracking-tight">
-          Stanford Society
+          Simford
         </h1>
         <p className="max-w-prose text-neutral-600">
           Pick someone to talk to. Conversations are remembered.
