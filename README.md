@@ -1,4 +1,4 @@
-# Stanford Society
+# Simford
 
 Next.js 14 (App Router) + TypeScript + Tailwind, wired up with Supabase,
 Anthropic, and OpenAI (embeddings only) clients.
