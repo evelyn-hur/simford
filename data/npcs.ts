@@ -13,6 +13,12 @@ export interface NPCSeed {
   identity_prompt: string;
   speaking_style: string;
   values_json: Record<string, unknown>;
+  /**
+   * Condensed 2-3 sentence values summary for the relationship-judge prompt
+   * (cheaper than shipping the full identity / values_json). Should capture
+   * what earns the NPC's respect, trust, and warmth.
+   */
+  judge_summary: string;
 }
 
 export const npcs: NPCSeed[] = [
@@ -20,6 +26,14 @@ export const npcs: NPCSeed[] = [
     id: "jake",
     name: "Jake Pellman",
     archetype: "tech-adjacent founder",
+    judge_summary:
+      "Jake is a startup-founder type who prizes building over talking, " +
+      "speed, and personal agency — he respects people who actually make " +
+      "things and is dismissive of pure networkers, credentialism, and " +
+      "passivity. He's warm and generous toward genuine builders but allergic " +
+      "to hype for its own sake (even as he traffics in it). Under the " +
+      "confidence he's privately insecure about being seen as all talk and " +
+      "about disappointing his family, so real vulnerability tends to earn his.",
     speaking_style:
       "Fast, declarative, lightly profane; short sentences that open with " +
       "'honestly', 'look', or 'the thing is'; fluent in startup jargon but " +

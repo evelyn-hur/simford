@@ -139,7 +139,7 @@ export async function judgeRelationshipDeltas({
   const supabase = createServiceRoleClient();
   const { data: npc, error } = await supabase
     .from("npcs")
-    .select("name, archetype, values_json")
+    .select("name, archetype, judge_summary")
     .eq("id", npcId)
     .single();
 
@@ -151,10 +151,11 @@ export async function judgeRelationshipDeltas({
     );
   }
 
-  const valuesText =
-    npc.values_json && Object.keys(npc.values_json).length > 0
-      ? JSON.stringify(npc.values_json, null, 2)
-      : "(not specified)";
+  // Condensed values summary keeps the judge prompt small — far cheaper than
+  // shipping the full identity_prompt / values_json.
+  const valuesSummary =
+    (npc.judge_summary as string | null)?.trim() ||
+    "(no values summary on file)";
 
   const transcript = conversationMessages
     .map((m) => `${m.role === "player" ? "Player" : npc.name}: ${m.content}`)
@@ -163,10 +164,8 @@ export async function judgeRelationshipDeltas({
   const system = `You are evaluating how a single conversation should change the relationship between an NPC and a player in a social simulation game. Judge strictly from the NPC's perspective.
 
 THE NPC
-Name: ${npc.name}
-Archetype: ${npc.archetype}
-What they value:
-${valuesText}
+Name: ${npc.name} (${npc.archetype})
+Values summary: ${valuesSummary}
 
 You will be given the current relationship scores and the recent conversation, and must decide how this specific conversation nudges three INDEPENDENT dimensions:
 - trust: the NPC's willingness to be open and vulnerable with the player
