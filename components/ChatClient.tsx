@@ -3,23 +3,30 @@
 import { useEffect, useRef, useState } from "react";
 import type { ChatMessage } from "@/lib/conversations";
 import MemoryPanel, { type MemoryUsed } from "@/components/MemoryPanel";
+import RelationshipPanel, {
+  type RelationshipScores,
+} from "@/components/RelationshipPanel";
 
 export default function ChatClient({
   npcId,
   npcName,
   conversationId,
   initialMessages,
+  initialScores,
 }: {
   npcId: string;
   npcName: string;
   conversationId: string;
   initialMessages: ChatMessage[];
+  initialScores: RelationshipScores;
 }) {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [memoriesUsed, setMemoriesUsed] = useState<MemoryUsed[]>([]);
+  const [scores, setScores] = useState<RelationshipScores>(initialScores);
+  const [turnId, setTurnId] = useState(0);
 
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -51,6 +58,7 @@ export default function ChatClient({
         response?: string;
         reply?: string;
         memoriesUsed?: MemoryUsed[];
+        relationshipScores?: RelationshipScores;
         error?: string;
       };
 
@@ -61,6 +69,8 @@ export default function ChatClient({
 
       setMessages((prev) => [...prev, { role: "npc", content: npcText }]);
       setMemoriesUsed(data.memoriesUsed ?? []);
+      if (data.relationshipScores) setScores(data.relationshipScores);
+      setTurnId((t) => t + 1);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -147,7 +157,17 @@ export default function ChatClient({
       </div>
       </div>
 
-      <MemoryPanel npcName={npcName} memories={memoriesUsed} />
+      {/* Right column: stacked panels */}
+      <div className="flex shrink-0 flex-col gap-4 lg:w-80">
+        <MemoryPanel npcName={npcName} memories={memoriesUsed} />
+        <RelationshipPanel
+          npcName={npcName}
+          npcId={npcId}
+          conversationId={conversationId}
+          scores={scores}
+          turnId={turnId}
+        />
+      </div>
     </div>
   );
 }

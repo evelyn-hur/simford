@@ -7,6 +7,12 @@ import {
   summarizeConversationAsMemory,
   type Memory,
 } from "@/lib/memory";
+import {
+  judgeRelationshipDeltas,
+  applyRelationshipDeltas,
+  buildRelationshipGuidance,
+  type RelationshipScores,
+} from "@/lib/relationships";
 import type { ChatMessage } from "@/lib/conversations";
 
 export const runtime = "nodejs";
@@ -90,6 +96,38 @@ export async function POST(req: Request) {
 
     const orderedHistory = (history ?? []).slice().reverse();
 
+    // 2b. Identify the player (the conversation's owner) and load the current
+    //     relationship scores — default 0.5s if there's no row yet. These
+    //     reflect state as of the START of this turn and are returned to the
+    //     UI; the deltas judged below apply going forward.
+    const { data: conversation } = await supabase
+      .from("conversations")
+      .select("player_id")
+      .eq("id", conversation_id)
+      .maybeSingle();
+    const playerId = conversation?.player_id as string | undefined;
+
+    let currentScores: RelationshipScores = {
+      trust: 0.5,
+      respect: 0.5,
+      vibe: 0.5,
+    };
+    if (playerId) {
+      const { data: rel } = await supabase
+        .from("player_npc_relationships")
+        .select("trust, respect, vibe")
+        .eq("player_id", playerId)
+        .eq("npc_id", npc_id)
+        .maybeSingle();
+      if (rel) {
+        currentScores = {
+          trust: rel.trust as number,
+          respect: rel.respect as number,
+          vibe: rel.vibe as number,
+        };
+      }
+    }
+
     // 3. Retrieve relevant memories. The query is the current message plus
     //    the last few messages of context. Retrieval failure degrades to
     //    "no memories" rather than failing the whole chat.
@@ -127,6 +165,10 @@ export async function POST(req: Request) {
         `\n\nRELEVANT MEMORIES (your own past observations, ordered by relevance):\n` +
         memoryLines;
     }
+
+    // Relationship state: translate the start-of-turn scores into behavioral
+    // guidance. Always present — defaults to 0.5s (all "mid") for a new pair.
+    system += `\n\n${buildRelationshipGuidance(currentScores)}`;
 
     const messages: Anthropic.MessageParam[] = [
       ...orderedHistory.map((m) => ({
@@ -211,6 +253,32 @@ export async function POST(req: Request) {
       console.error("summarizeConversationAsMemory failed:", err);
     });
 
+    // 7b. Fire-and-forget: judge how this turn shifts the relationship and
+    //     apply the deltas. Uses the same recent-message window; judged
+    //     against the start-of-turn scores. Never blocks or fails the
+    //     response (same serverless caveat as the memory write above).
+    if (playerId) {
+      const pid = playerId;
+      void (async () => {
+        try {
+          const deltas = await judgeRelationshipDeltas({
+            npcId: npc.id,
+            playerId: pid,
+            conversationMessages: summaryWindow,
+            currentScores,
+          });
+          await applyRelationshipDeltas({
+            playerId: pid,
+            npcId: npc.id,
+            deltas,
+            conversationId: conversation_id,
+          });
+        } catch (err) {
+          console.error("relationship judge/apply failed:", err);
+        }
+      })();
+    }
+
     // 8. Respond, including retrieved-memory metadata for the UI.
     const memoriesUsed = memories.map((m) => ({
       content: m.content,
@@ -227,6 +295,7 @@ export async function POST(req: Request) {
       response: reply,
       reply,
       memoriesUsed,
+      relationshipScores: currentScores,
       usage: {
         input_tokens: completion.usage.input_tokens,
         output_tokens: completion.usage.output_tokens,

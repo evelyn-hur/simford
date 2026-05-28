@@ -5,6 +5,7 @@ import {
   getMessages,
   getOrCreateConversation,
 } from "@/lib/conversations";
+import { DEV_PLAYER_ID } from "@/lib/dev";
 import NpcAvatar from "@/components/NpcAvatar";
 import ChatClient from "@/components/ChatClient";
 
@@ -29,6 +30,19 @@ export default async function ChatPage({
 
   const conversationId = await getOrCreateConversation(npc.id);
   const initialMessages = await getMessages(conversationId);
+
+  // Current relationship scores (start state for the meters); default 0.5s.
+  const { data: rel } = await supabase
+    .from("player_npc_relationships")
+    .select("trust, respect, vibe")
+    .eq("player_id", DEV_PLAYER_ID)
+    .eq("npc_id", npc.id)
+    .maybeSingle();
+  const initialScores = {
+    trust: (rel?.trust as number) ?? 0.5,
+    respect: (rel?.respect as number) ?? 0.5,
+    vibe: (rel?.vibe as number) ?? 0.5,
+  };
 
   return (
     <div className="flex h-[calc(100vh-9rem)] flex-col">
@@ -55,6 +69,7 @@ export default async function ChatPage({
         npcName={npc.name}
         conversationId={conversationId}
         initialMessages={initialMessages}
+        initialScores={initialScores}
       />
     </div>
   );
