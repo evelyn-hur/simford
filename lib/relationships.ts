@@ -65,7 +65,7 @@ const RELATIONSHIP_DESCRIPTORS: Record<
   trust: {
     low: "guarded — keep things surface-level, don't share anything personal or vulnerable",
     mid: "warming up — willing to share ordinary personal details but not your deepest insecurities",
-    high: "high — you can be genuinely vulnerable, share your hidden fears and doubts if the moment is right",
+    high: "high — you're willing to drop the performance occasionally when the player invites it, but you still sound like yourself. Most of the time you're still the same person you've always been.",
   },
   respect: {
     low: "low — you're a bit dismissive of their input",
@@ -93,36 +93,16 @@ export function buildRelationshipGuidance(scores: RelationshipScores): string {
   ].join("\n");
 }
 
-function extractText(message: Anthropic.Message): string {
-  return message.content
-    .filter((block): block is Anthropic.TextBlock => block.type === "text")
-    .map((block) => block.text)
-    .join("\n")
-    .trim();
-}
-
 /**
- * Pull the JSON object out of a model response that may be wrapped in markdown
- * fences or surrounded by prose. Prefers a fenced block, then falls back to the
- * outermost { ... } span.
- */
-function extractJsonObject(text: string): string {
-  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
-  const body = fenced ? fenced[1] : text;
-  const start = body.indexOf("{");
-  const end = body.lastIndexOf("}");
-  if (start === -1 || end === -1 || end < start) return body.trim();
-  return body.slice(start, end + 1);
-}
-
-/**
- * Ask Claude Sonnet to judge how a single conversation should shift the
- * player↔NPC relationship along trust / respect / vibe, each a delta in
- * [-0.2, 0.2], from the NPC's perspective.
+ * Judge how a single conversation should shift the player↔NPC relationship
+ * along trust / respect / vibe, each a delta in [-0.2, 0.2], from the NPC's
+ * perspective.
  *
- * Parsing is defensive: markdown fences are stripped, deltas are clamped to
- * range, and any failure (parse error, non-numeric deltas) returns all-zero
- * deltas after logging — judging must never break the caller.
+ * Uses Anthropic tool-use: the model is forced to call `record_relationship_change`,
+ * so the result arrives as a structured tool input — no JSON parsing. Deltas
+ * are clamped to range; if the model doesn't call the tool or the request
+ * fails, returns all-zero deltas after logging (judging must never break the
+ * caller).
  */
 export async function judgeRelationshipDeltas({
   npcId,
@@ -161,79 +141,117 @@ export async function judgeRelationshipDeltas({
     .map((m) => `${m.role === "player" ? "Player" : npc.name}: ${m.content}`)
     .join("\n");
 
-  const system = `You are evaluating how a single conversation should change the relationship between an NPC and a player in a social simulation game. Judge strictly from the NPC's perspective.
+  const system = `You are an impartial relationship analyst. Your job is to evaluate how an entire conversation affected the relationship between a character (the NPC) and a person they're talking to (the player), from the NPC's perspective.
 
-THE NPC
-Name: ${npc.name} (${npc.archetype})
-Values summary: ${valuesSummary}
+THE NPC YOU'RE EVALUATING FOR:
+Name: ${npc.name}
+Who they are: ${npc.archetype}
+What they value: ${valuesSummary}
+(Score changes should reflect THIS character's values. For example, a character who prizes intellectual rigor will gain respect when challenged well and lose it when given lazy answers; a character who is emotionally guarded will gain trust slowly.)
 
-You will be given the current relationship scores and the recent conversation, and must decide how this specific conversation nudges three INDEPENDENT dimensions:
-- trust: the NPC's willingness to be open and vulnerable with the player
-- respect: the NPC's perception of the player's competence and substance
-- vibe: how much the NPC enjoyed the interaction
+THE THREE DIMENSIONS (each ranges 0.0 to 1.0, currently as shown):
+- TRUST (${currentScores.trust.toFixed(2)}): How safe the NPC feels being open and vulnerable with this person. Rises when the person is reliable, reciprocates openness, keeps confidence. Falls when the person is dismissive of something personal, judgmental, or betrays confidence.
+- RESPECT (${currentScores.respect.toFixed(2)}): How much the NPC regards this person's competence, substance, and judgment. Rises with insight, thoughtful pushback, evident skill. Falls with shallowness, ignorance, or unearned arrogance.
+- VIBE (${currentScores.vibe.toFixed(2)}): How much the NPC simply enjoys this person's company. Rises with warmth, humor, ease. Falls with friction, awkwardness, or coldness.
 
-Each dimension currently sits in [0, 1]. Return a DELTA for each in [-0.2, 0.2].
+These three move INDEPENDENTLY. A brilliant but condescending remark might raise respect (+) while lowering vibe (-). Sharing a vulnerability might raise trust (+) and vibe (+) without touching respect.
 
-CALIBRATION
-- Most ordinary conversations should produce SMALL deltas (±0.02 to ±0.05).
-- Reserve LARGE deltas (±0.1 to ±0.2) for genuinely significant moments: vulnerability shared, a betrayal, real intellectual connection, a real insult.
-- The dimensions move independently. A brilliant but arrogant remark might raise respect while lowering vibe; sharing a secret might raise trust without touching respect.
-- A forgettable or neutral exchange should be at or near zero.
+CALIBRATION (important):
+- You are evaluating an entire conversation, not a single message. Weigh the overall arc — a conversation that started tense but ended warm should reflect the net effect. A long substantive conversation can justify larger deltas than a brief one.
+- Most ordinary conversations should produce SMALL deltas: ±0.02 to ±0.05.
+- Reserve LARGE deltas (±0.10 to ±0.20) for genuinely significant moments anchored in the conversation: real vulnerability shared, a betrayal, a moment of true intellectual connection, a cutting insult, a broken confidence.
+- Neutral small talk (weather, logistics) should produce deltas at or near 0.00.
+- Scores can and SHOULD go DOWN when the interaction warrants it. Do not default to positivity. A boring or mildly negative exchange is not a reason to raise scores.
 
-Respond with ONLY a JSON object — no markdown, no prose — in exactly this shape:
-{
-  "delta_trust": <float between -0.2 and 0.2>,
-  "delta_respect": <float between -0.2 and 0.2>,
-  "delta_vibe": <float between -0.2 and 0.2>,
-  "reasoning": "<one or two sentences explaining the changes from the NPC's perspective>"
-}`;
+Record your evaluation by calling the record_relationship_change tool.`;
 
-  const userContent = `CURRENT SCORES (0–1)
-trust: ${currentScores.trust}
-respect: ${currentScores.respect}
-vibe: ${currentScores.vibe}
+  const userContent = `THE CONVERSATION TO EVALUATE:
+${transcript}`;
 
-RECENT CONVERSATION
-${transcript}
+  const tool: Anthropic.Tool = {
+    name: "record_relationship_change",
+    description:
+      "Record how this conversation changed the NPC's trust, respect, and vibe toward the player, from the NPC's perspective.",
+    input_schema: {
+      type: "object",
+      properties: {
+        delta_trust: {
+          type: "number",
+          description: "Change in TRUST, a float from -0.20 to 0.20.",
+        },
+        delta_respect: {
+          type: "number",
+          description: "Change in RESPECT, a float from -0.20 to 0.20.",
+        },
+        delta_vibe: {
+          type: "number",
+          description: "Change in VIBE, a float from -0.20 to 0.20.",
+        },
+        reasoning: {
+          type: "string",
+          description:
+            "One or two sentences, from the NPC's perspective, explaining the changes.",
+        },
+      },
+      required: ["delta_trust", "delta_respect", "delta_vibe", "reasoning"],
+    },
+  };
 
-Evaluate how this conversation should change the relationship. Respond with only the JSON object.`;
-
-  let rawText = "";
   try {
     const message = await anthropic.messages.create({
       model: MODEL,
       max_tokens: MAX_TOKENS,
       system,
+      tools: [tool],
+      // Force the model to call the tool, so output is always structured.
+      tool_choice: { type: "tool", name: "record_relationship_change" },
       messages: [{ role: "user", content: userContent }],
     });
 
-    rawText = extractText(message);
-    const parsed = JSON.parse(extractJsonObject(rawText)) as Record<
-      string,
-      unknown
-    >;
+    const toolUse = message.content.find(
+      (block): block is Anthropic.ToolUseBlock =>
+        block.type === "tool_use" &&
+        block.name === "record_relationship_change",
+    );
 
-    const dt = Number(parsed.delta_trust);
-    const dr = Number(parsed.delta_respect);
-    const dv = Number(parsed.delta_vibe);
+    if (!toolUse) {
+      console.error(
+        `judgeRelationshipDeltas: model did not call the tool ` +
+          `(npc=${npcId}, player=${playerId})`,
+      );
+      return zeroDeltas();
+    }
+
+    const input = toolUse.input as {
+      delta_trust?: unknown;
+      delta_respect?: unknown;
+      delta_vibe?: unknown;
+      reasoning?: unknown;
+    };
+
+    const dt = Number(input.delta_trust);
+    const dr = Number(input.delta_respect);
+    const dv = Number(input.delta_vibe);
 
     if (![dt, dr, dv].every(Number.isFinite)) {
-      throw new Error("non-numeric delta(s) in model output");
+      console.error(
+        `judgeRelationshipDeltas: non-numeric delta(s) from tool ` +
+          `(npc=${npcId}, player=${playerId})`,
+      );
+      return zeroDeltas();
     }
 
     return {
       delta_trust: clampDelta(dt),
       delta_respect: clampDelta(dr),
       delta_vibe: clampDelta(dv),
-      reasoning:
-        typeof parsed.reasoning === "string" ? parsed.reasoning : "",
+      reasoning: typeof input.reasoning === "string" ? input.reasoning : "",
     };
   } catch (err) {
     console.error(
-      `judgeRelationshipDeltas: failed to parse model output ` +
+      `judgeRelationshipDeltas: request failed ` +
         `(npc=${npcId}, player=${playerId}): ` +
-        `${err instanceof Error ? err.message : String(err)}. ` +
-        `Raw: ${rawText.slice(0, 300)}`,
+        `${err instanceof Error ? err.message : String(err)}`,
     );
     return zeroDeltas();
   }

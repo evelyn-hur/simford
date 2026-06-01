@@ -8,17 +8,23 @@ import {
   type Memory,
 } from "@/lib/memory";
 import {
-  judgeRelationshipDeltas,
-  applyRelationshipDeltas,
   buildRelationshipGuidance,
   type RelationshipScores,
 } from "@/lib/relationships";
 import type { ChatMessage } from "@/lib/conversations";
+import { inGameTimestampForDay, weekOfQuarter } from "@/lib/gameTime";
 
 export const runtime = "nodejs";
 
 const MODEL = "claude-haiku-4-5-20251001";
-const MAX_TOKENS = 1024;
+// Hard cap on reply length. Keeps the model honest about the "1–3 sentences,
+// up to 5 max" rule when it would otherwise drift into long monologues even
+// after the prompt forbids it. ~250 = comfortable for 5 typical sentences
+// without mid-sentence truncation; longer attempts get cut.
+const MAX_TOKENS = 260;
+// Lower temperature tightens instruction-following — Haiku at 1.0 is eager to
+// expand on emotional moments even when the prompt forbids it.
+const TEMPERATURE = 0.5;
 // How many prior messages to feed back to the model as context.
 const HISTORY_LIMIT = 30;
 // How many recent messages to embed as the memory-retrieval query.
@@ -68,7 +74,7 @@ export async function POST(req: Request) {
     // 1. Fetch the NPC's identity prompt.
     const { data: npc, error: npcError } = await supabase
       .from("npcs")
-      .select("id, identity_prompt, speaking_style")
+      .select("id, identity_prompt, speaking_style, identity_keywords")
       .eq("id", npc_id)
       .single();
 
@@ -82,7 +88,7 @@ export async function POST(req: Request) {
     // 2. Fetch recent message history for this conversation (chronological).
     const { data: history, error: historyError } = await supabase
       .from("messages")
-      .select("role, content, created_at")
+      .select("role, content, created_at, in_game_day")
       .eq("conversation_id", conversation_id)
       .order("created_at", { ascending: false })
       .limit(HISTORY_LIMIT);
@@ -128,6 +134,20 @@ export async function POST(req: Request) {
       }
     }
 
+    // 2c. Current in-game day → in-game "now". Used for memory recency (so it
+    //     decays over in-game time) and as the in_game_timestamp for memories
+    //     written this turn.
+    let inGameDay = 1;
+    if (playerId) {
+      const { data: gs } = await supabase
+        .from("game_state")
+        .select("in_game_day")
+        .eq("player_id", playerId)
+        .maybeSingle();
+      if (gs) inGameDay = gs.in_game_day as number;
+    }
+    const nowInGame = inGameTimestampForDay(inGameDay);
+
     // 3. Retrieve relevant memories. The query is the current message plus
     //    the last few messages of context. Retrieval failure degrades to
     //    "no memories" rather than failing the whole chat.
@@ -145,6 +165,8 @@ export async function POST(req: Request) {
         npcId: npc.id,
         queryText,
         topK: RETRIEVAL_TOP_K,
+        nowInGame,
+        identityKeywords: (npc.identity_keywords as string[]) ?? [],
       });
     } catch (err) {
       console.error("retrieveMemories failed (continuing without):", err);
@@ -170,26 +192,69 @@ export async function POST(req: Request) {
     // guidance. Always present — defaults to 0.5s (all "mid") for a new pair.
     system += `\n\n${buildRelationshipGuidance(currentScores)}`;
 
+    // In-game time context. Each message in history is also prefixed with its
+    // [Day X] below so the model can place prior turns in in-game time and
+    // avoid real-world phrasings like "an hour ago".
+    system +=
+      `\n\nIN-GAME TIME\n` +
+      `Today is in-game Day ${inGameDay} (Week ${weekOfQuarter(inGameDay)} of Fall Quarter). ` +
+      `Each prior turn in the conversation below is tagged with the in-game day it happened on. ` +
+      `When referring to past events, count in in-game days — use "today", "yesterday", "<N> days ago", or "earlier in the quarter". ` +
+      `Do not invoke real-world time like "an hour ago" or "last week".`;
+
+    // Final format reminder — non-negotiable, repeated at the end of system
+    // so it's the freshest instruction before generation. The model otherwise
+    // drifts into roleplay actions and long monologues even when the identity
+    // prompt forbids them.
+    system +=
+      `\n\nFINAL FORMAT REMINDER — non-negotiable. If your reply violates any of these, it is wrong:\n` +
+      `- LENGTH: 1–3 sentences. Up to 5 only if the moment really calls for it. NEVER more than 5. If you find yourself starting a 6th sentence, stop. Match the player's message length — short in, short out.\n` +
+      `- Do NOT structure your reply as multiple paragraphs. Do NOT bullet point. Do NOT enumerate options A/B. Just talk.\n` +
+      `- NO asterisks. NO action descriptions like *leans forward* / *pauses* / *sighs* / *nods*. NO stage directions of any kind. Dialogue only.\n` +
+      `- NO bracketed metadata like [Day N] anywhere in your reply.\n` +
+      `- Stay in your specific voice. Do NOT drift into generic empathetic-mentor / therapist voice even when the player is vulnerable.`;
+
+    // Tag each historical message with the in-game day it happened on (when
+    // available); the new player message gets today's day. Skip the prefix if
+    // the content already starts with one (legacy NPC replies that leaked the
+    // format before output sanitization landed).
+    const tag = (content: string, day: number | null | undefined) => {
+      if (day == null) return content;
+      if (/^\[Day \d+\]/.test(content)) return content;
+      return `[Day ${day}] ${content}`;
+    };
+
     const messages: Anthropic.MessageParam[] = [
       ...orderedHistory.map((m) => ({
         role: toAnthropicRole(m.role as DbRole),
-        content: m.content as string,
+        content: tag(m.content as string, m.in_game_day as number | null),
       })),
-      { role: "user" as const, content: message },
+      { role: "user" as const, content: tag(message, inGameDay) },
     ];
 
     // 5. Call Claude Haiku 4.5.
     const completion = await anthropic.messages.create({
       model: MODEL,
       max_tokens: MAX_TOKENS,
+      temperature: TEMPERATURE,
       system,
       messages,
     });
 
-    const reply = completion.content
+    const rawReply = completion.content
       .filter((block): block is Anthropic.TextBlock => block.type === "text")
       .map((block) => block.text)
       .join("\n")
+      .trim();
+
+    // Sanitize: strip leading "[Day N]" prefixes the model mimicked from our
+    // input-side tagging, and strip RP-style *action* annotations that slip
+    // past the format instructions. Defense in depth.
+    const reply = rawReply
+      .replace(/^(\[Day \d+\]\s*)+/i, "")
+      .replace(/\*[^*\n]+\*/g, "")
+      .replace(/[ \t]{2,}/g, " ")
+      .replace(/\n{3,}/g, "\n\n")
       .trim();
 
     if (!reply) {
@@ -203,7 +268,12 @@ export async function POST(req: Request) {
     //    created_at precedes the NPC reply (messages are ordered by it).
     const { error: playerInsertError } = await supabase
       .from("messages")
-      .insert({ conversation_id, role: "player", content: message });
+      .insert({
+        conversation_id,
+        role: "player",
+        content: message,
+        in_game_day: inGameDay,
+      });
 
     if (playerInsertError) {
       return NextResponse.json(
@@ -220,6 +290,7 @@ export async function POST(req: Request) {
       content: reply,
       tokens_in: completion.usage.input_tokens,
       tokens_out: completion.usage.output_tokens,
+      in_game_day: inGameDay,
     });
 
     if (npcInsertError) {
@@ -249,35 +320,15 @@ export async function POST(req: Request) {
       npcId: npc.id,
       messages: summaryWindow,
       conversationId: conversation_id,
+      inGameTimestamp: nowInGame,
     }).catch((err) => {
       console.error("summarizeConversationAsMemory failed:", err);
     });
 
-    // 7b. Fire-and-forget: judge how this turn shifts the relationship and
-    //     apply the deltas. Uses the same recent-message window; judged
-    //     against the start-of-turn scores. Never blocks or fails the
-    //     response (same serverless caveat as the memory write above).
-    if (playerId) {
-      const pid = playerId;
-      void (async () => {
-        try {
-          const deltas = await judgeRelationshipDeltas({
-            npcId: npc.id,
-            playerId: pid,
-            conversationMessages: summaryWindow,
-            currentScores,
-          });
-          await applyRelationshipDeltas({
-            playerId: pid,
-            npcId: npc.id,
-            deltas,
-            conversationId: conversation_id,
-          });
-        } catch (err) {
-          console.error("relationship judge/apply failed:", err);
-        }
-      })();
-    }
+    // (Relationship judging used to run here per-turn. Moved to the explicit
+    // /api/conversation/end endpoint so the judge sees the full conversation
+    // and we don't pay a Sonnet call after every message. The per-turn fetch
+    // of `currentScores` above is preserved for display in the API response.)
 
     // 8. Respond, including retrieved-memory metadata for the UI.
     const memoriesUsed = memories.map((m) => ({
@@ -296,6 +347,10 @@ export async function POST(req: Request) {
       reply,
       memoriesUsed,
       relationshipScores: currentScores,
+      // The in-game day the server stamped this turn's messages with — the
+      // client uses it to stamp the just-appended pair for cross-conversation
+      // divider rendering.
+      inGameDay,
       usage: {
         input_tokens: completion.usage.input_tokens,
         output_tokens: completion.usage.output_tokens,

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { ChatMessage } from "@/lib/conversations";
+import { weekOfQuarter } from "@/lib/gameTime";
 import MemoryPanel, { type MemoryUsed } from "@/components/MemoryPanel";
 import RelationshipPanel, {
   type RelationshipScores,
@@ -28,6 +29,11 @@ export default function ChatClient({
   const [scores, setScores] = useState<RelationshipScores>(initialScores);
   const [turnId, setTurnId] = useState(0);
 
+  // Ref (not state) so the safety-net effect's closure always reads the latest
+  // "has the conversation been ended yet" value. There is no explicit end
+  // button — `/api/conversation/end` is fired only by the safety net (route
+  // change / tab close) and indirectly by /api/advance-day.
+  const hasEndedRef = useRef(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -40,7 +46,11 @@ export default function ChatClient({
 
     setError(null);
     setInput("");
-    setMessages((prev) => [...prev, { role: "player", content: text }]);
+    // Optimistic append (no inGameDay yet — server fills it in on response).
+    setMessages((prev) => [
+      ...prev,
+      { role: "player", content: text, conversationId },
+    ]);
     setLoading(true);
 
     try {
@@ -59,6 +69,7 @@ export default function ChatClient({
         reply?: string;
         memoriesUsed?: MemoryUsed[];
         relationshipScores?: RelationshipScores;
+        inGameDay?: number;
         error?: string;
       };
 
@@ -67,7 +78,25 @@ export default function ChatClient({
         throw new Error(data.error ?? "Something went wrong");
       }
 
-      setMessages((prev) => [...prev, { role: "npc", content: npcText }]);
+      // Backfill the optimistic player message + append the NPC reply, both
+      // stamped with the in-game day the server used (so dividers render).
+      setMessages((prev) => {
+        const next = prev.slice();
+        const last = next.length - 1;
+        if (last >= 0 && next[last].role === "player") {
+          next[last] = {
+            ...next[last],
+            inGameDay: data.inGameDay ?? null,
+          };
+        }
+        next.push({
+          role: "npc",
+          content: npcText,
+          conversationId,
+          inGameDay: data.inGameDay ?? null,
+        });
+        return next;
+      });
       setMemoriesUsed(data.memoriesUsed ?? []);
       if (data.relationshipScores) setScores(data.relationshipScores);
       setTurnId((t) => t + 1);
@@ -85,76 +114,134 @@ export default function ChatClient({
     }
   }
 
+  // Navigation safety net: route change (cleanup) and tab close (beforeunload)
+  // both fire /api/conversation/end via navigator.sendBeacon so the request
+  // reliably reaches the server during page teardown. Idempotent at the
+  // server, so a stray duplicate after /api/advance-day already closed the
+  // conversation is harmless.
+  useEffect(() => {
+    const fireEndBeacon = () => {
+      if (hasEndedRef.current) return;
+      hasEndedRef.current = true;
+      if (typeof navigator !== "undefined" && navigator.sendBeacon) {
+        const blob = new Blob(
+          [JSON.stringify({ conversation_id: conversationId })],
+          { type: "application/json" },
+        );
+        navigator.sendBeacon("/api/conversation/end", blob);
+      }
+    };
+    window.addEventListener("beforeunload", fireEndBeacon);
+    return () => {
+      window.removeEventListener("beforeunload", fireEndBeacon);
+      // Client-side route change / component unmount also counts as leaving.
+      fireEndBeacon();
+    };
+  }, [conversationId]);
+
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 pt-4 lg:flex-row">
       {/* Chat column */}
       <div className="flex min-w-0 flex-1 flex-col">
-      {/* Message list */}
-      <div className="flex-1 space-y-4 overflow-y-auto px-1 py-6">
-        {messages.length === 0 && (
-          <p className="py-12 text-center text-sm text-neutral-400">
-            Say hello to start the conversation.
+        {/* Message list */}
+        <div className="flex-1 space-y-4 overflow-y-auto px-1 py-6">
+          {messages.length === 0 && (
+            <p className="py-12 text-center text-sm text-neutral-400">
+              Say hello to start the conversation.
+            </p>
+          )}
+
+          {messages.map((m, i) => {
+            // iMessage-style divider: show above the first message that
+            // carries a day, and any time conversation_id or in_game_day
+            // changes between adjacent messages.
+            const prev = i > 0 ? messages[i - 1] : null;
+            const dayChanged =
+              prev != null &&
+              (prev.inGameDay ?? null) !== (m.inGameDay ?? null);
+            const convChanged =
+              prev != null &&
+              (prev.conversationId ?? null) !== (m.conversationId ?? null);
+            const showDivider =
+              ((i === 0 && m.inGameDay != null) ||
+                dayChanged ||
+                convChanged) &&
+              m.inGameDay != null;
+
+            return (
+              <div key={i}>
+                {showDivider && m.inGameDay != null && (
+                  <div className="my-4 flex items-center gap-3 text-[11px] text-neutral-400">
+                    <div className="h-px flex-1 bg-neutral-200" />
+                    <span className="whitespace-nowrap">
+                      Day {m.inGameDay} · Week {weekOfQuarter(m.inGameDay)} of
+                      Fall Quarter
+                    </span>
+                    <div className="h-px flex-1 bg-neutral-200" />
+                  </div>
+                )}
+                <div
+                  className={`flex ${
+                    m.role === "player" ? "justify-end" : "justify-start"
+                  }`}
+                >
+                  <div
+                    className={`max-w-[75%] whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                      m.role === "player"
+                        ? "bg-neutral-900 text-white"
+                        : "border border-neutral-200 bg-white text-neutral-800 shadow-sm"
+                    }`}
+                  >
+                    {m.content}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+
+          {loading && (
+            <div className="flex justify-start">
+              <div className="rounded-2xl border border-neutral-200 bg-white px-4 py-2.5 text-sm text-neutral-400 shadow-sm">
+                <span className="inline-flex gap-1">
+                  <span className="animate-pulse">●</span>
+                  <span className="animate-pulse [animation-delay:150ms]">
+                    ●
+                  </span>
+                  <span className="animate-pulse [animation-delay:300ms]">
+                    ●
+                  </span>
+                </span>
+              </div>
+            </div>
+          )}
+
+          <div ref={bottomRef} />
+        </div>
+
+        {error && (
+          <p className="mb-2 rounded-lg bg-cardinal/5 px-3 py-2 text-sm text-cardinal">
+            {error}
           </p>
         )}
 
-        {messages.map((m, i) => (
-          <div
-            key={i}
-            className={`flex ${
-              m.role === "player" ? "justify-end" : "justify-start"
-            }`}
+        {/* Composer */}
+        <div className="flex items-end gap-3 border-t border-neutral-200 pt-4">
+          <textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={onKeyDown}
+            rows={1}
+            placeholder="Type a message…"
+            className="max-h-40 flex-1 resize-none rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-cardinal/40 focus:ring-2 focus:ring-cardinal/10"
+          />
+          <button
+            onClick={() => void send()}
+            disabled={loading || !input.trim()}
+            className="rounded-xl bg-cardinal px-5 py-3 text-sm font-medium text-white transition hover:bg-cardinal/90 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            <div
-              className={`max-w-[75%] whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-                m.role === "player"
-                  ? "bg-neutral-900 text-white"
-                  : "border border-neutral-200 bg-white text-neutral-800 shadow-sm"
-              }`}
-            >
-              {m.content}
-            </div>
-          </div>
-        ))}
-
-        {loading && (
-          <div className="flex justify-start">
-            <div className="rounded-2xl border border-neutral-200 bg-white px-4 py-2.5 text-sm text-neutral-400 shadow-sm">
-              <span className="inline-flex gap-1">
-                <span className="animate-pulse">●</span>
-                <span className="animate-pulse [animation-delay:150ms]">●</span>
-                <span className="animate-pulse [animation-delay:300ms]">●</span>
-              </span>
-            </div>
-          </div>
-        )}
-
-        <div ref={bottomRef} />
-      </div>
-
-      {error && (
-        <p className="mb-2 rounded-lg bg-cardinal/5 px-3 py-2 text-sm text-cardinal">
-          {error}
-        </p>
-      )}
-
-      {/* Composer */}
-      <div className="flex items-end gap-3 border-t border-neutral-200 pt-4">
-        <textarea
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={onKeyDown}
-          rows={1}
-          placeholder="Type a message…"
-          className="max-h-40 flex-1 resize-none rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-cardinal/40 focus:ring-2 focus:ring-cardinal/10"
-        />
-        <button
-          onClick={() => void send()}
-          disabled={loading || !input.trim()}
-          className="rounded-xl bg-cardinal px-5 py-3 text-sm font-medium text-white transition hover:bg-cardinal/90 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          Send
-        </button>
-      </div>
+            Send
+          </button>
+        </div>
       </div>
 
       {/* Right column: stacked panels */}

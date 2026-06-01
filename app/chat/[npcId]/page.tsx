@@ -2,12 +2,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import {
-  getMessages,
+  getThreadMessages,
   getOrCreateConversation,
 } from "@/lib/conversations";
 import { DEV_PLAYER_ID } from "@/lib/dev";
+import { getInGameDay } from "@/lib/gameState";
 import NpcAvatar from "@/components/NpcAvatar";
 import ChatClient from "@/components/ChatClient";
+import GameClock from "@/components/GameClock";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +31,10 @@ export default async function ChatPage({
   if (!npc) notFound();
 
   const conversationId = await getOrCreateConversation(npc.id);
-  const initialMessages = await getMessages(conversationId);
+  // Full cross-conversation thread (all past + the current open one) so the
+  // chat displays every message ever exchanged with this NPC, with iMessage-
+  // style dividers between conversations / days.
+  const initialMessages = await getThreadMessages(DEV_PLAYER_ID, npc.id);
 
   // Current relationship scores (start state for the meters); default 0.5s.
   const { data: rel } = await supabase
@@ -43,6 +48,8 @@ export default async function ChatPage({
     respect: (rel?.respect as number) ?? 0.5,
     vibe: (rel?.vibe as number) ?? 0.5,
   };
+
+  const inGameDay = await getInGameDay(DEV_PLAYER_ID);
 
   return (
     <div className="flex h-[calc(100vh-9rem)] flex-col">
@@ -61,6 +68,9 @@ export default async function ChatPage({
             {npc.name}
           </p>
           <p className="truncate text-sm text-neutral-500">{npc.archetype}</p>
+        </div>
+        <div className="ml-auto">
+          <GameClock initialDay={inGameDay} conversationId={conversationId} />
         </div>
       </div>
 

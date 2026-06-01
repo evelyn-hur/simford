@@ -5,11 +5,21 @@ import { DEV_PLAYER_ID, DEV_PLAYER_NAME } from "@/lib/dev";
 export interface ChatMessage {
   role: "player" | "npc";
   content: string;
+  // Optional context — populated by getThreadMessages for cross-conversation
+  // display (boundary dividers in the chat UI). The summarizer/memory paths
+  // ignore these fields.
+  conversationId?: string;
+  inGameDay?: number | null;
 }
 
 /**
- * Returns the most recent conversation between the dev player and an NPC,
- * creating one (and the dev player row) if none exists yet.
+ * Returns the most recent ACTIVE conversation between the dev player and an
+ * NPC, creating a new one (and the dev player row) if there isn't one.
+ *
+ * A conversation is "active" when `judged = false`. Once it's been ended via
+ * `/api/conversation/end` (which sets judged=true), the next call here starts
+ * a fresh conversation row instead of reusing the closed one — so returning
+ * to an NPC whose last conversation was judged always begins a new session.
  *
  * Uses the service-role client because RLS is enabled with no anon policies.
  */
@@ -27,17 +37,19 @@ export async function getOrCreateConversation(npcId: string): Promise<string> {
     throw new Error(`Failed to ensure dev player: ${playerError.message}`);
   }
 
-  // Reuse the latest conversation for this player+npc for continuity.
+  // Reuse the latest UNJUDGED (active) conversation for this player+npc. If
+  // the latest one is judged (already ended), fall through to creating a new
+  // one — we do NOT resurrect closed conversations.
   const { data: existing } = await supabase
     .from("conversations")
-    .select("id")
+    .select("id, judged")
     .eq("player_id", DEV_PLAYER_ID)
     .eq("npc_id", npcId)
     .order("started_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  if (existing) return existing.id as string;
+  if (existing && !existing.judged) return existing.id as string;
 
   const { data: created, error } = await supabase
     .from("conversations")
@@ -70,5 +82,47 @@ export async function getMessages(
   return (data ?? []).map((m) => ({
     role: m.role as "player" | "npc",
     content: m.content as string,
+  }));
+}
+
+/**
+ * Full chronological message thread for a (player, NPC) pair, spanning ALL
+ * conversations between them — past judged conversations and the current
+ * open one. Each message carries `conversationId` and `inGameDay` so the UI
+ * can render iMessage-style dividers between conversations / days.
+ */
+export async function getThreadMessages(
+  playerId: string,
+  npcId: string,
+): Promise<ChatMessage[]> {
+  const supabase = createServiceRoleClient();
+
+  // First grab the conversation ids for this pair...
+  const { data: convs, error: convError } = await supabase
+    .from("conversations")
+    .select("id")
+    .eq("player_id", playerId)
+    .eq("npc_id", npcId);
+  if (convError) {
+    throw new Error(`Failed to load conversations: ${convError.message}`);
+  }
+  const convIds = (convs ?? []).map((c) => c.id as string);
+  if (convIds.length === 0) return [];
+
+  // ...then all messages across those conversations, chronological.
+  const { data, error } = await supabase
+    .from("messages")
+    .select("role, content, conversation_id, in_game_day, created_at")
+    .in("conversation_id", convIds)
+    .order("created_at", { ascending: true });
+  if (error) {
+    throw new Error(`Failed to load thread messages: ${error.message}`);
+  }
+
+  return (data ?? []).map((m) => ({
+    role: m.role as "player" | "npc",
+    content: m.content as string,
+    conversationId: m.conversation_id as string,
+    inGameDay: m.in_game_day as number | null,
   }));
 }

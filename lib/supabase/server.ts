@@ -2,6 +2,17 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
 /**
+ * Force every Supabase request to bypass the Next.js Data Cache.
+ *
+ * Without this, server-component reads via supabase-js get cached at the Next
+ * fetch layer and return stale snapshots — `dynamic = "force-dynamic"` is not
+ * always enough on its own (esp. in dev). This makes correctness independent
+ * of route-level cache config.
+ */
+const noStoreFetch: typeof fetch = (input, init) =>
+  fetch(input, { ...init, cache: "no-store" });
+
+/**
  * Server-side Supabase client scoped to the request's cookies.
  * Use in Server Components, Route Handlers, and Server Actions.
  */
@@ -33,6 +44,7 @@ export function createClient() {
           }
         },
       },
+      global: { fetch: noStoreFetch },
     },
   );
 }
@@ -52,6 +64,7 @@ export function createServiceRoleClient() {
         },
         setAll() {},
       },
+      global: { fetch: noStoreFetch },
     },
   );
 }
