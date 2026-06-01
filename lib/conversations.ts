@@ -1,6 +1,7 @@
 import "server-only";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import { DEV_PLAYER_ID, DEV_PLAYER_NAME } from "@/lib/dev";
+import { endConversation } from "@/lib/conversationEnd";
 
 export interface ChatMessage {
   role: "player" | "npc";
@@ -49,7 +50,36 @@ export async function getOrCreateConversation(npcId: string): Promise<string> {
     .limit(1)
     .maybeSingle();
 
-  if (existing && !existing.judged) return existing.id as string;
+  if (existing && !existing.judged) {
+    // Reuse only if EMPTY (i.e., a fresh row from a recent render that the
+    // user never typed into). Once a conversation has any messages, returning
+    // to /chat/[npc] means a new session — close out the old one and start
+    // fresh. This makes page load deterministic; we don't rely on the
+    // beforeunload beacon having reached the server before the SSR runs.
+    const { data: firstMsg } = await supabase
+      .from("messages")
+      .select("id")
+      .eq("conversation_id", existing.id as string)
+      .limit(1)
+      .maybeSingle();
+
+    if (!firstMsg) {
+      return existing.id as string;
+    }
+
+    // Stale unjudged conversation with messages — kick off the judge
+    // fire-and-forget. endConversation's atomic claim immediately flips
+    // judged=true so the new conversation we create below is correctly
+    // ranked as the latest active one; the Sonnet judge call completes
+    // asynchronously and the relationship_events row lands a few seconds
+    // later. Same serverless caveat as other fire-and-forget calls.
+    void endConversation(existing.id as string).catch((err) =>
+      console.error(
+        "getOrCreateConversation: end of stale conv failed:",
+        err,
+      ),
+    );
+  }
 
   const { data: created, error } = await supabase
     .from("conversations")

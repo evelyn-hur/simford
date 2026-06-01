@@ -34,6 +34,11 @@ export default function ChatClient({
   // button — `/api/conversation/end` is fired only by the safety net (route
   // change / tab close) and indirectly by /api/advance-day.
   const hasEndedRef = useRef(false);
+  // Counts how many cleanups have fired. Used to skip the very first cleanup
+  // in dev, which is React 18 strict mode's `setup → cleanup → setup` test
+  // run on initial mount — that artifact would otherwise consume the safety
+  // net and silently disable the real refresh/navigate triggers.
+  const cleanupCountRef = useRef(0);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -134,6 +139,19 @@ export default function ChatClient({
     window.addEventListener("beforeunload", fireEndBeacon);
     return () => {
       window.removeEventListener("beforeunload", fireEndBeacon);
+      cleanupCountRef.current += 1;
+      // React 18 strict mode (always on in Next.js dev) runs every effect as
+      // `setup → cleanup → setup` on the initial mount, as a test of the
+      // cleanup. Without this guard, that first cleanup would (a) fire the
+      // beacon for the empty just-created conversation, and (b) flip
+      // hasEndedRef so the REAL refresh/navigate triggers silently no-op.
+      // Skip only that first cleanup, only in dev.
+      if (
+        cleanupCountRef.current === 1 &&
+        process.env.NODE_ENV === "development"
+      ) {
+        return;
+      }
       // Client-side route change / component unmount also counts as leaving.
       fireEndBeacon();
     };
