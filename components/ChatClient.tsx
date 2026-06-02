@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { ChatMessage } from "@/lib/conversations";
 import { weekOfQuarter } from "@/lib/gameTime";
 import MemoryPanel, { type MemoryUsed } from "@/components/MemoryPanel";
@@ -28,6 +29,13 @@ export default function ChatClient({
   const [memoriesUsed, setMemoriesUsed] = useState<MemoryUsed[]>([]);
   const [scores, setScores] = useState<RelationshipScores>(initialScores);
   const [turnId, setTurnId] = useState(0);
+  const [sayingGoodbye, setSayingGoodbye] = useState(false);
+  // Bumped after a goodbye so the relationship panel surfaces the new event.
+  const [relRefreshKey, setRelRefreshKey] = useState(0);
+  // Messages sent into the CURRENT conversation this session. Resets when the
+  // conversation rotates (after a goodbye), so "Say goodbye" is only enabled
+  // once there's actually something in this conversation to judge.
+  const [sendsThisConversation, setSendsThisConversation] = useState(0);
 
   // Ref (not state) so the safety-net effect's closure always reads the latest
   // "has the conversation been ended yet" value. There is no explicit end
@@ -40,6 +48,44 @@ export default function ChatClient({
   // net and silently disable the real refresh/navigate triggers.
   const cleanupCountRef = useRef(0);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+
+  // "Say goodbye": explicitly end + judge the current conversation, then start
+  // fresh. Ends the conversation server-side (the same path the navigate-away
+  // safety net uses), reflects the new scores immediately (the meters animate
+  // via RelationshipPanel's flash effect), nudges the relationship panel to
+  // surface the new event, marks this conversation ended so the rotation below
+  // doesn't re-beacon it, and re-runs the server component to get a fresh
+  // conversation id for the next chat. Client state (the message thread) is
+  // preserved across the refresh.
+  const sayGoodbye = useCallback(async () => {
+    if (sayingGoodbye || loading || sendsThisConversation === 0) return;
+    setSayingGoodbye(true);
+    try {
+      const res = await fetch("/api/conversation/end", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversation_id: conversationId }),
+      });
+      const data = (await res.json()) as {
+        status?: string;
+        scores?: RelationshipScores;
+      };
+      if (res.ok && data.scores) setScores(data.scores);
+      setRelRefreshKey((k) => k + 1);
+      hasEndedRef.current = true;
+      router.refresh();
+    } catch {
+      // Non-critical; the safety net will still judge on navigate-away.
+    } finally {
+      setSayingGoodbye(false);
+    }
+  }, [sayingGoodbye, loading, sendsThisConversation, conversationId, router]);
+
+  // A new conversation id means a fresh session — nothing sent into it yet.
+  useEffect(() => {
+    setSendsThisConversation(0);
+  }, [conversationId]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -105,6 +151,7 @@ export default function ChatClient({
       setMemoriesUsed(data.memoriesUsed ?? []);
       if (data.relationshipScores) setScores(data.relationshipScores);
       setTurnId((t) => t + 1);
+      setSendsThisConversation((n) => n + 1);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -125,6 +172,10 @@ export default function ChatClient({
   // server, so a stray duplicate after /api/advance-day already closed the
   // conversation is harmless.
   useEffect(() => {
+    // A new conversation id means a fresh, not-yet-ended session — re-arm the
+    // safety net (it may have been disarmed by a manual "wrap up & update",
+    // which rotates the conversation via router.refresh()).
+    hasEndedRef.current = false;
     const fireEndBeacon = () => {
       if (hasEndedRef.current) return;
       hasEndedRef.current = true;
@@ -243,22 +294,34 @@ export default function ChatClient({
         )}
 
         {/* Composer */}
-        <div className="flex items-end gap-3 border-t border-neutral-200 pt-4">
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={onKeyDown}
-            rows={1}
-            placeholder="Type a message…"
-            className="max-h-40 flex-1 resize-none rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-cardinal/40 focus:ring-2 focus:ring-cardinal/10"
-          />
-          <button
-            onClick={() => void send()}
-            disabled={loading || !input.trim()}
-            className="rounded-xl bg-cardinal px-5 py-3 text-sm font-medium text-white transition hover:bg-cardinal/90 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            Send
-          </button>
+        <div className="border-t border-neutral-200 pt-4">
+          <div className="mb-2 flex justify-end">
+            <button
+              onClick={() => void sayGoodbye()}
+              disabled={sayingGoodbye || loading || sendsThisConversation === 0}
+              title="End this conversation and update the relationship"
+              className="rounded-lg px-2.5 py-1 text-xs font-medium text-neutral-500 transition hover:bg-neutral-100 hover:text-cardinal disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-neutral-500"
+            >
+              {sayingGoodbye ? "Saying goodbye…" : "Say goodbye 👋"}
+            </button>
+          </div>
+          <div className="flex items-end gap-3">
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={onKeyDown}
+              rows={1}
+              placeholder="Type a message…"
+              className="max-h-40 flex-1 resize-none rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-cardinal/40 focus:ring-2 focus:ring-cardinal/10"
+            />
+            <button
+              onClick={() => void send()}
+              disabled={loading || !input.trim()}
+              className="rounded-xl bg-cardinal px-5 py-3 text-sm font-medium text-white transition hover:bg-cardinal/90 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Send
+            </button>
+          </div>
         </div>
       </div>
 
@@ -271,6 +334,7 @@ export default function ChatClient({
           conversationId={conversationId}
           scores={scores}
           turnId={turnId}
+          refreshKey={relRefreshKey}
         />
       </div>
     </div>

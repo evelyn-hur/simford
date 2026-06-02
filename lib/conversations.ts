@@ -156,3 +156,52 @@ export async function getThreadMessages(
     inGameDay: m.in_game_day as number | null,
   }));
 }
+
+/**
+ * Catch-all safety net: judge any of a player's conversations that were left
+ * open (unjudged) with real messages in them. This covers the case where a
+ * conversation was abandoned without a clean end — a hard tab-close or mobile
+ * timeout where `beforeunload` never fired, and the player never returned to
+ * that specific NPC (whose chat-page load would otherwise end it) nor advanced
+ * the day (which sweeps all open conversations).
+ *
+ * Empty placeholder conversations are skipped so getOrCreateConversation can
+ * still reuse them. endConversation is idempotent (atomic judged-claim), so
+ * this races harmlessly with the navigate-away beacon and the per-NPC
+ * stale-path. Fire-and-forget friendly — judging happens via Sonnet and the
+ * caller should not block on it.
+ */
+export async function endStaleConversationsForPlayer(
+  playerId: string,
+): Promise<void> {
+  const supabase = createServiceRoleClient();
+
+  const { data: openConvs } = await supabase
+    .from("conversations")
+    .select("id")
+    .eq("player_id", playerId)
+    .eq("judged", false);
+  const openIds = (openConvs ?? []).map((c) => c.id as string);
+  if (openIds.length === 0) return;
+
+  // Only end conversations that actually have messages — leave empty
+  // placeholders alone so they remain reusable.
+  const { data: msgs } = await supabase
+    .from("messages")
+    .select("conversation_id")
+    .in("conversation_id", openIds);
+  const withMessages = new Set(
+    (msgs ?? []).map((m) => m.conversation_id as string),
+  );
+
+  await Promise.all(
+    Array.from(withMessages).map((id) =>
+      endConversation(id).catch((e) =>
+        console.error(
+          `endStaleConversationsForPlayer: end of ${id} failed:`,
+          e,
+        ),
+      ),
+    ),
+  );
+}

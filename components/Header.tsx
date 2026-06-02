@@ -9,6 +9,9 @@ export default function Header() {
           <a href="/" className="hover:text-neutral-900">
             Home
           </a>
+          <a href="/relationships" className="hover:text-neutral-900">
+            Relationships
+          </a>
         </nav>
       </div>
     </header>

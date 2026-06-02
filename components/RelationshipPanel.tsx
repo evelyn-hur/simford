@@ -1,12 +1,23 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  computeDerivedMetrics,
+  rankDerivedMetrics,
+  type MetricBand,
+} from "@/lib/relationshipMetrics";
 
 export interface RelationshipScores {
   trust: number;
   respect: number;
   vibe: number;
 }
+
+const BAND_BADGE: Record<MetricBand, string> = {
+  high: "bg-cardinal/15 text-cardinal",
+  medium: "bg-neutral-200 text-neutral-600",
+  low: "bg-neutral-100 text-neutral-400",
+};
 
 interface RelEvent {
   delta_trust: number;
@@ -43,12 +54,19 @@ export default function RelationshipPanel({
   conversationId,
   scores,
   turnId,
+  refreshKey,
 }: {
   npcName: string;
   npcId: string;
   conversationId: string;
   scores: RelationshipScores;
   turnId: number;
+  /**
+   * Bumped by the parent after a "Say goodbye" judges the current conversation.
+   * When it changes, the panel opens the history and refetches so the new
+   * relationship event is visible. (The meters update via the `scores` prop.)
+   */
+  refreshKey?: number;
 }) {
   // Highlight dimensions that changed since the previous turn.
   const [flash, setFlash] = useState<Record<Dim, boolean>>({
@@ -97,6 +115,17 @@ export default function RelationshipPanel({
     }
   }, [npcId, conversationId]);
 
+  // After a "Say goodbye" (parent bumps refreshKey), open the history and
+  // refetch so the freshly-written relationship event is visible. Skips the
+  // initial render so it only reacts to real changes.
+  const prevRefreshKey = useRef(refreshKey);
+  useEffect(() => {
+    if (refreshKey === prevRefreshKey.current) return;
+    prevRefreshKey.current = refreshKey;
+    setHistoryOpen(true);
+    void loadHistory();
+  }, [refreshKey, loadHistory]);
+
   // Fetch when first expanded.
   useEffect(() => {
     if (historyOpen && events === null) void loadHistory();
@@ -110,7 +139,10 @@ export default function RelationshipPanel({
     return () => clearTimeout(t);
   }, [turnId, historyOpen, loadHistory]);
 
-  const potential = pct((scores.trust + scores.respect) / 2);
+  // Derived "fun" labels, recomputed from the live scores; show the top 3.
+  const topMetrics = rankDerivedMetrics(
+    computeDerivedMetrics(scores.trust, scores.respect, scores.vibe),
+  ).slice(0, 3);
   const firstName = npcName.split(/\s+/)[0] || npcName;
 
   return (
@@ -146,19 +178,31 @@ export default function RelationshipPanel({
           })}
         </div>
 
-        {/* Derived metric (placeholder) */}
-        <div className="mt-3 flex items-center justify-between rounded-lg bg-cardinal/5 px-3 py-2">
-          <div>
-            <p className="text-[11px] font-medium text-neutral-600">
-              Cofounder potential
-            </p>
-            <p className="text-[10px] text-neutral-400">
-              placeholder · (trust + respect) / 2
-            </p>
+        {/* Derived "fun" metrics — top 3, recomputed from the live scores. */}
+        <div className="mt-3 rounded-lg bg-cardinal/5 px-3 py-2.5">
+          <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wide text-neutral-500">
+            What you could be
+          </p>
+          <div className="space-y-1">
+            {topMetrics.map((m) => (
+              <div
+                key={m.key}
+                className="flex items-center justify-between gap-2"
+              >
+                <span className="text-[11px] text-neutral-600">{m.label}</span>
+                <span className="flex items-center gap-1.5">
+                  <span className="text-[10px] tabular-nums text-neutral-400">
+                    {Math.round(m.score * 100)}
+                  </span>
+                  <span
+                    className={`rounded px-1.5 py-0.5 text-[10px] font-semibold capitalize ${BAND_BADGE[m.band]}`}
+                  >
+                    {m.band}
+                  </span>
+                </span>
+              </div>
+            ))}
           </div>
-          <span className="text-sm font-semibold tabular-nums text-cardinal">
-            {potential}%
-          </span>
         </div>
 
         {/* Relationship history */}

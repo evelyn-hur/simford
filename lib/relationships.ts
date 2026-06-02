@@ -16,6 +16,23 @@ export interface RelationshipScores {
   vibe: number;
 }
 
+// Derived "fun" relationship labels (cofounder / close-friend / study-partner /
+// frenemy). The implementation lives in a client-safe module so client
+// components can compute them from live scores too; re-exported here for
+// server-side callers (e.g. the /relationships inspection page).
+export {
+  computeDerivedMetrics,
+  rankDerivedMetrics,
+  metricBand,
+  DERIVED_METRIC_LABELS,
+} from "./relationshipMetrics";
+export type {
+  DerivedMetrics,
+  DerivedMetricKey,
+  MetricBand,
+  RankedMetric,
+} from "./relationshipMetrics";
+
 export interface JudgeRelationshipDeltasParams {
   npcId: string;
   playerId: string;
