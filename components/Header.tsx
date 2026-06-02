@@ -12,6 +12,9 @@ export default function Header() {
           <a href="/relationships" className="hover:text-neutral-900">
             Relationships
           </a>
+          <a href="/network" className="hover:text-neutral-900">
+            Network
+          </a>
         </nav>
       </div>
     </header>
