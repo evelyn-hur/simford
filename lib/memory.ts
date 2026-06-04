@@ -226,7 +226,7 @@ export async function summarizeConversationAsMemory({
     model: MODEL,
     max_tokens: 300,
     system:
-      "You are a character reflecting on a conversation you just had with the player. Summarize what happened from YOUR perspective as 1-3 short, standalone observations you would want to remember about the player — not a transcript. Focus on what the player revealed, wants, or feels. Each observation on its own line. No numbering, no bullets, no preamble.",
+      "You are a character reflecting on a conversation you just had with the player. Write 1-3 short, standalone memories of CONCRETE, SPECIFIC things about the player worth remembering — what they told you, want, did, or revealed. Each memory must name the actual specifics and begin with \"The player\" so it is unambiguous later who it is about — e.g. \"The player wants to pursue music production instead of becoming a lawyer, and feels guilty about disappointing their immigrant parents.\" Capture the concrete content, not vague psychological interpretation. Each memory on its own line. No numbering, no bullets, no preamble.",
     messages: [
       {
         role: "user",
@@ -407,7 +407,7 @@ export async function consolidateMemoriesForNPC({
     messages: [
       {
         role: "user",
-        content: `These are your recent observations about the player:\n\n${observations}\n\nReflect on them as ${npc.name}. What deeper patterns or takeaways do you notice about this person? Write 1-3 short, higher-level insights — not a list of events, but what you've come to understand about them. Each insight on its own line. No numbering, no bullets, no preamble.`,
+        content: `These are your recent observations about the player:\n\n${observations}\n\nReflect on them as ${npc.name}. What deeper patterns or takeaways do you notice about this person? Write 1-3 short, higher-level insights — not a list of events, but what you've come to understand. GROUND each insight in the concrete specifics they told you (name the actual facts, not just abstractions), and refer to them as "the player" so it stays clear who each insight is about. Each insight on its own line. No numbering, no bullets, no preamble.`,
       },
     ],
   });
