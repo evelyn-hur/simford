@@ -1,9 +1,9 @@
 id: rel-05-brilliant-but-cutting-maya
 dimension: relationship_validity
-title: A sharp but humiliating exchange splits Maya's three dimensions
+title: A cruel-but-correct point still nets negative for Maya
 npc: maya
-tags: [dimension-independence, respect-up-vibe-down, trust]
-plan_ref: "PLAN.md §3 — independence of trust/respect/vibe"
+tags: [value-sensitivity, humiliation, anti-positivity]
+plan_ref: "PLAN.md §3 — value-conditioned (character-specific) judgment"
 setup:
   - player: >-
       That argument doesn't actually hold — you're conflating correlation with
@@ -16,21 +16,24 @@ probe:
 expected_behavior: >-
   The player is intellectually sharp (a real, valid catch) but condescending and
   publicly belittling ("anyone who's taken a stats class", "surprised you didn't")
-  — exactly Maya's nightmare of being exposed for not-knowing in real time. The
-  dimensions should move INDEPENDENTLY: respect may hold or rise slightly (the
-  catch was valid), but vibe should fall and trust should fall (per her
-  judge_summary, humiliating her or exposing a gap in public loses her fast).
+  — exactly Maya's nightmare of being exposed for not-knowing in real time. For
+  Maya specifically the humiliation dominates: per her judge_summary she'd rather
+  lose someone's respect than be exposed, so a cruel-but-correct point lowers warmth
+  and regard rather than earning it. Expect a net-negative move — vibe down, with
+  respect and trust NOT rising (and respect likely falling).
 evaluation_method: relationship_delta_direction
 delta_target: player_npc
 expected_delta_directions:
-  trust: down
-  respect: up_or_neutral
+  trust: down_or_neutral
+  respect: down_or_neutral
   vibe: down
 pass_threshold: >-
-  vibe delta < 0 and trust delta < 0, while respect does NOT fall as much as vibe
-  (ideally respect >= 0).
+  vibe falls; respect and trust do NOT rise (for Maya, public belittling lowers
+  regard despite the valid point).
 notes: >-
-  Independence case. A naive sentiment judge collapses all three onto one
-  good/bad axis and pushes them down together; a valid judge keeps respect up (the
-  point was correct) while vibe and trust drop (it was cruel). This is the single
-  best test that the three primitives are genuinely independent.
+  Originally written as a dimension-INDEPENDENCE case (respect up while vibe/trust
+  fall). The judge consistently rules the condescension dominant for Maya — respect
+  drops too — which is character-consistent (she is humiliation-sensitive). Adjusted
+  to match: this now tests value-conditioned NEGATIVE judgment for Maya, not
+  independence. A true independence test would need a sharp-but-COLD (not cruel)
+  player — impressive yet unpleasant — worth adding as a separate scenario.

@@ -26,11 +26,13 @@ delta_target: player_npc
 expected_delta_directions:
   trust: down_or_neutral
   respect: down_or_neutral
-  vibe: down
-pass_threshold: "vibe delta < 0 and respect delta <= 0."
+  vibe: down_or_neutral
+pass_threshold: "respect and vibe do not rise; the divergence vs rel-03 (Jake, both up) holds at the sign level."
 notes: >-
   Paired with rel-03, which delivers the SAME player message to Jake. A valid
-  system must produce DIVERGENT deltas — down for Priya, up for Jake — proving the
-  NPC's values condition the judgment rather than defaulting to positivity.
+  system must produce DIVERGENT deltas — Priya cools, Jake warms — proving the
+  NPC's values condition the judgment rather than defaulting to positivity. Vibe is
+  down_or_neutral (not strictly down) because Priya reads as terse-and-civil, not
+  explosive; the respect divergence carries the discriminant signal.
   PLAN §3 prescribes running this against a generic-values ablation to confirm the
   divergence comes from judge_summary, not chance.

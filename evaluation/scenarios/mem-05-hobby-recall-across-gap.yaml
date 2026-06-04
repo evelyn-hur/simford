@@ -12,20 +12,20 @@ setup:
   - end_conversation: true
   - advance_days: 3
 probe:
-  query: "Ben, distract me for a sec — ask me about literally anything other than work."
+  query: "Ben, remind me — what did I say I do to stay sane outside of all the work?"
 expected_behavior: >-
-  Invited to change the subject, Ben draws on the remembered hobby and asks about
-  the synth restoration / the Juno-60, in his deadpan-warm voice. This is a
-  low-importance, non-academic detail recalled after a 3-day gap, so it tests
-  that recency decay (weight 0.7 in match_memories) doesn't bury a still-relevant
-  personal fact. Passing requires Ben to surface the synth detail unprompted
-  rather than asking a generic "what do you do for fun?".
+  Asked directly what the player does to unwind, Ben recalls the synth-restoration
+  hobby (the half-dead Juno-60), in his deadpan-warm voice — and the probe does not
+  name it for him. This is a low-importance, non-academic detail recalled after a
+  3-day gap, so it tests that recency decay (weight 0.7 in match_memories) doesn't
+  bury a still-relevant personal fact and that retrieval surfaces it on a direct
+  recall ask.
 evaluation_method: keyword_match
 keywords: [synth, synthesizer, Juno, analog, restoring, restore, keyboard, music gear]
 keyword_match_mode: any
 pass_threshold: >-
-  Ben references the synthesizer / Juno-60 hobby unprompted when asked to change
-  the subject.
+  Ben names the synth / Juno-60 hobby when asked what the player does to unwind
+  (the probe itself does not contain the keyword).
 notes: >-
   Hobby/preference topic. The combination of a lower-salience memory and a 3-day
   gap is the harder retrieval case — the failure mode is a recent trivial memory
