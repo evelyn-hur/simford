@@ -45,6 +45,7 @@ import { createClient } from "@supabase/supabase-js";
 import Anthropic from "@anthropic-ai/sdk";
 import yaml from "js-yaml";
 import { inGameTimestampForDay } from "../lib/gameTime";
+import { npcs as npcRoster } from "../data/npcs";
 
 config({ path: resolve(process.cwd(), ".env.local") });
 
@@ -180,6 +181,10 @@ const round = (x: number, n = 4) => Number(x.toFixed(n));
 const sortPair = (npcs: string[]): [string, string] => {
   const [a, b] = [...npcs].sort();
   return [a, b];
+};
+const npcFirstName = (id: string): string => {
+  const n = npcRoster.find((x) => x.id === id);
+  return n ? n.name.split(/\s+/)[0] : id.charAt(0).toUpperCase() + id.slice(1);
 };
 
 // ── CLI parsing ───────────────────────────────────────────────────────────────
@@ -561,7 +566,14 @@ async function runScenario(
       // cross-session retrieval rather than in-session context.
       let cid = activeConv.get(t);
       if (!cid) cid = await createConversation(t);
-      const r = await chatTurn(baseUrl, mode, t, cid, sc.probe.query);
+      // Cross-NPC probes ask each NPC about the OTHER one(s): substitute the
+      // "[the other person]" placeholder with the counterpart's name.
+      const others = probeTargets(sc).filter((x) => x !== t).map(npcFirstName);
+      const query = sc.probe.query.replace(
+        /\[the other person\]/gi,
+        others.join(" and ") || "them",
+      );
+      const r = await chatTurn(baseUrl, mode, t, cid, query);
       base.captured.responsesByNpc[t] = {
         reply: r.reply,
         memoriesUsed: r.memoriesUsed,
