@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "seed:npcs": "tsx scripts/seed-npcs.ts"
+    "seed:npcs": "tsx scripts/seed-npcs.ts",
+    "eval": "tsx scripts/run-evaluation.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.27.3",
@@ -21,6 +22,7 @@
     "react-force-graph-2d": "^1.29.1"
   },
   "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
     "@types/node": "^20.16.11",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.0",
@@ -28,6 +30,7 @@
     "dotenv": "^16.4.5",
     "eslint": "^8.57.1",
     "eslint-config-next": "14.2.15",
+    "js-yaml": "^4.2.0",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.13",
     "tsx": "^4.19.1",
