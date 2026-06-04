@@ -371,6 +371,12 @@ export async function consolidateMemoriesForNPC({
     .eq("npc_id", npcId)
     .eq("memory_type", "episodic")
     .is("consolidated_at", null)
+    // Player-derived memories only. Inter-NPC event memories are written with a
+    // null source_conversation_id (see lib/events.ts); folding them into
+    // "observations about the player" leaks other NPCs' details (e.g. an
+    // off-screen event where Alex was grinding the MCAT) into the player's
+    // semantic memories. Exclude them so reflection stays about the player.
+    .not("source_conversation_id", "is", null)
     .order("created_at", { ascending: true });
 
   if (error) {
