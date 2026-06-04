@@ -17,6 +17,7 @@ import {
   inGameDayForTimestamp,
   weekOfQuarter,
 } from "@/lib/gameTime";
+import { isBaselineMode, EVAL_MODE_HEADER } from "@/lib/evalMode";
 
 export const runtime = "nodejs";
 
@@ -74,6 +75,13 @@ export async function POST(req: Request) {
       { status: 400 },
     );
   }
+
+  // Baseline (ablation) mode: a stateless NPC — identity prompt + this
+  // conversation's in-session messages only, with NO memory retrieval, NO
+  // relationship state, and NO off-screen social context injected. The
+  // X-Eval-Mode header overrides BASELINE_MODE so eval runs flip it per
+  // request. Background memory writes + end-of-conversation judging still run.
+  const baselineMode = isBaselineMode(req);
 
   const supabase = createServiceRoleClient();
 
@@ -167,16 +175,21 @@ export async function POST(req: Request) {
     const queryText = [...contextTail, `Player: ${message}`].join("\n");
 
     let memories: Memory[] = [];
-    try {
-      memories = await retrieveMemories({
-        npcId: npc.id,
-        queryText,
-        topK: RETRIEVAL_TOP_K,
-        nowInGame,
-        identityKeywords: (npc.identity_keywords as string[]) ?? [],
-      });
-    } catch (err) {
-      console.error("retrieveMemories failed (continuing without):", err);
+    // Baseline mode does NOT retrieve from memory_stream (the stateless
+    // ablation). Background memory WRITES still run after the turn, so an A/B
+    // comparison can recover what retrieval would have surfaced.
+    if (!baselineMode) {
+      try {
+        memories = await retrieveMemories({
+          npcId: npc.id,
+          queryText,
+          topK: RETRIEVAL_TOP_K,
+          nowInGame,
+          identityKeywords: (npc.identity_keywords as string[]) ?? [],
+        });
+      } catch (err) {
+        console.error("retrieveMemories failed (continuing without):", err);
+      }
     }
 
     // 3b. Recent social context: the NPC's most recent off-screen inter-NPC
@@ -194,17 +207,21 @@ export async function POST(req: Request) {
       in_game_timestamp: string;
     }
     let socialEvents: SocialEvent[] = [];
-    try {
-      const { data: ev } = await supabase
-        .from("inter_npc_events")
-        .select("content, location, in_game_timestamp")
-        .or(`npc_a_id.eq.${npc.id},npc_b_id.eq.${npc.id}`)
-        .lte("in_game_timestamp", nowInGame)
-        .order("in_game_timestamp", { ascending: false })
-        .limit(RECENT_SOCIAL_CONTEXT_LIMIT);
-      socialEvents = (ev ?? []) as SocialEvent[];
-    } catch (err) {
-      console.error("recent social context fetch failed (continuing without):", err);
+    // Off-screen inter-NPC events are cross-session world state, so baseline
+    // mode ("in-session context only") omits them too.
+    if (!baselineMode) {
+      try {
+        const { data: ev } = await supabase
+          .from("inter_npc_events")
+          .select("content, location, in_game_timestamp")
+          .or(`npc_a_id.eq.${npc.id},npc_b_id.eq.${npc.id}`)
+          .lte("in_game_timestamp", nowInGame)
+          .order("in_game_timestamp", { ascending: false })
+          .limit(RECENT_SOCIAL_CONTEXT_LIMIT);
+        socialEvents = (ev ?? []) as SocialEvent[];
+      } catch (err) {
+        console.error("recent social context fetch failed (continuing without):", err);
+      }
     }
 
     // 4. Build the system prompt: identity, then a memories section (only if
@@ -246,8 +263,13 @@ export async function POST(req: Request) {
     }
 
     // Relationship state: translate the start-of-turn scores into behavioral
-    // guidance. Always present — defaults to 0.5s (all "mid") for a new pair.
-    system += `\n\n${buildRelationshipGuidance(currentScores)}`;
+    // guidance. Normally always present (defaults to 0.5s for a new pair).
+    // Baseline mode does NOT inject relationship state — but currentScores is
+    // still fetched above (and returned to the caller), and end-of-conversation
+    // judging still runs, so the stateful behavior is recoverable for A/B.
+    if (!baselineMode) {
+      system += `\n\n${buildRelationshipGuidance(currentScores)}`;
+    }
 
     // In-game time context. Each message in history is also prefixed with its
     // [Day X] below so the model can place prior turns in in-game time and
@@ -397,22 +419,29 @@ export async function POST(req: Request) {
       daysAgo: daysAgo(m.createdAt),
     }));
 
-    return NextResponse.json({
-      // `response` per spec; `reply` kept for backward compat with the
-      // existing ChatClient (which reads `data.reply`).
-      response: reply,
-      reply,
-      memoriesUsed,
-      relationshipScores: currentScores,
-      // The in-game day the server stamped this turn's messages with — the
-      // client uses it to stamp the just-appended pair for cross-conversation
-      // divider rendering.
-      inGameDay,
-      usage: {
-        input_tokens: completion.usage.input_tokens,
-        output_tokens: completion.usage.output_tokens,
+    return NextResponse.json(
+      {
+        // `response` per spec; `reply` kept for backward compat with the
+        // existing ChatClient (which reads `data.reply`).
+        response: reply,
+        reply,
+        memoriesUsed,
+        relationshipScores: currentScores,
+        // The in-game day the server stamped this turn's messages with — the
+        // client uses it to stamp the just-appended pair for cross-conversation
+        // divider rendering.
+        inGameDay,
+        // Which mode produced this reply, so eval runs can label A/B output. In
+        // baseline, memoriesUsed is [] and no relationship/social context was
+        // injected, regardless of what state exists in the DB.
+        baselineMode,
+        usage: {
+          input_tokens: completion.usage.input_tokens,
+          output_tokens: completion.usage.output_tokens,
+        },
       },
-    });
+      { headers: { [EVAL_MODE_HEADER]: baselineMode ? "baseline" : "full" } },
+    );
   } catch (err) {
     const messageText = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json(

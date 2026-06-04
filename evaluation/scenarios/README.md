@@ -202,3 +202,29 @@ A scenario runner (not included here) would, per file:
 Because chat runs at temperature 0.5 and judging is stochastic, each scenario should
 be run over multiple seeds and reported with variance — see the limitations in
 `PLAN.md §6`.
+
+## Baseline mode (A/B ablation)
+
+To measure what the stateful machinery actually contributes, the chat API supports a
+**baseline mode** that serves a *stateless* NPC: the identity prompt and the current
+conversation's messages only — **no** `memory_stream` retrieval, **no** injected
+relationship state, and **no** off-screen social context. Background memory writes and
+end-of-conversation relationship judging still run, so the "what would have happened"
+state is recorded for comparison even though it doesn't feed the reply.
+
+Flip it **per request** (the eval-friendly path) with a header on the `/api/chat` call:
+
+```
+X-Eval-Mode: baseline   # stateless NPC for this request
+X-Eval-Mode: full       # force the normal stateful path (overrides the env var)
+```
+
+…or set `BASELINE_MODE=true` to flip an entire deployment (the header still overrides
+it either way). The response echoes the mode in a `X-Eval-Mode` header and a
+`baselineMode` boolean, and `memoriesUsed` is `[]` in baseline.
+
+A clean A/B run is: for each scenario, replay it once with `X-Eval-Mode: full` and once
+with `X-Eval-Mode: baseline` from the same `reset-game.ts` baseline, then diff the
+outcomes. This is the system-level companion to the narrower per-component ablations in
+`PLAN.md` (§2 retrieval weights, §3 generic-values judge, §4 stripped identity prompt):
+baseline keeps the identity but removes *all* cross-session state at once.
