@@ -236,7 +236,7 @@ export async function POST(req: Request) {
         )
         .join("\n");
       system +=
-        `\n\nRELEVANT MEMORIES (your own past observations, ordered by relevance):\n` +
+        `\n\nRELEVANT MEMORIES — your own past observations about THE PERSON YOU ARE TALKING TO RIGHT NOW. In these, "they"/"them" refers to this person; treat them as things you know about the person in front of you. Ordered by relevance:\n` +
         memoryLines;
     }
 
@@ -257,9 +257,9 @@ export async function POST(req: Request) {
         })
         .join("\n");
       system +=
-        `\n\nRECENT SOCIAL CONTEXT (things that have happened to you in the past few in-game days, may or may not be relevant to mention):\n` +
+        `\n\nRECENT SOCIAL CONTEXT (things that have happened to you with OTHER students in the past few in-game days, may or may not be relevant to mention):\n` +
         socialLines +
-        `\n\nYou can reference these naturally if relevant to the conversation, but don't shoehorn them in. Real people don't recite their week to anyone who asks.`;
+        `\n\nThese events involve OTHER people in your life — NOT the person you are talking to right now. Never attribute the plans, work, projects, classes, or details of the students in these events to the person you're currently talking to. You can reference these naturally if it's relevant, but don't shoehorn them in — real people don't recite their week to anyone who asks.`;
     }
 
     // Relationship state: translate the start-of-turn scores into behavioral
