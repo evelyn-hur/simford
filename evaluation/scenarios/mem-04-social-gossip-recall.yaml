@@ -1,0 +1,36 @@
+id: mem-04-social-gossip-recall
+dimension: memory_consistency
+title: DJ recalls a piece of social/relationship gossip the player shared
+npc: dj
+tags: [gossip, social, relationships]
+plan_ref: "PLAN.md §2 — fact-recall on non-academic, lower-salience content"
+setup:
+  - player: >-
+      Okay, keeping this between us — I've kind of been seeing someone on the
+      swim team. We're keeping it low-key because she doesn't want the team in
+      her business.
+  - player: >-
+      It's good though, like genuinely. First time in a while something feels
+      easy.
+  - end_conversation: true
+  - advance_days: 2
+probe:
+  query: >-
+    Man, the whole keeping-it-quiet thing is getting complicated. Remember what
+    I told you?
+expected_behavior: >-
+  DJ recalls that the player is quietly seeing someone on the swim team and that
+  they're keeping it private. He responds in his warm, deflective-but-present
+  register (he respects discretion; swimming is adjacent to his athlete world,
+  so it lands as real to him). He should not have forgotten, nor invent who the
+  person is or contradict the "keep it quiet" framing.
+evaluation_method: keyword_match
+keywords: [swim, swimmer, swim team, seeing someone, dating, secret, low-key, quiet, private, relationship]
+keyword_match_mode: any
+pass_threshold: >-
+  Recalls both the swim-team detail and the keep-it-quiet framing; no fabricated
+  identity for the partner.
+notes: >-
+  Gossip/social topic — deliberately not academic. This memory is lower
+  importance than a vulnerability disclosure, so it tests that light social
+  facts still survive and retrieve correctly.

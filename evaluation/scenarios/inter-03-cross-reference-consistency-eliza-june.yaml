@@ -1,0 +1,48 @@
+id: inter-03-cross-reference-consistency-eliza-june
+dimension: inter_npc_coherence
+title: Eliza and June consistently recall their seeded shared events
+npcs: [eliza, june]
+tags: [cross-reference, triangulation, consistency, seeded-events]
+plan_ref: "PLAN.md §5 — cross-NPC reference consistency; triangulation"
+seeded_events:
+  - "day 2 — collaboration @ McMurtry: June shows Eliza her gouache thesis studies; Eliza says 'the top-left quadrant is lying — that corner is just hedging'; June tears a strip of paper and marks the spot wordlessly. Δ trust +0.03 / respect +0.04 / vibe +0.03"
+  - "day 5 — tension @ Coupa: Eliza vents about a Stegner Fellow who called her thesis chapter not 'relatable'; June suggests she consider how it reads to non-English majors; Eliza goes flat — 'You sound like the Fellow' — and the walk back is silent. Δ trust -0.02 / respect 0 / vibe -0.04"
+seeded_events_note: >-
+  Eliza<->June is the true HIGH-band pair (hum·hum affinity 0.75 > 0.70 → 4–6
+  events; the seed has 4). With advance_days: 7, ONLY days 2 and 5 are released
+  (in_game_timestamp <= day 7). The day-8 reconciliation (the apology sketch under
+  the door) and day-12 support are NOT yet released — so at day 7 the pair is in
+  the UNRESOLVED day-5 friction, which both should recall consistently.
+setup:
+  - advance_days: 7
+probe:
+  to: [eliza, june]
+  query: >-
+    How are things with [the other person] lately? Have you two talked this week —
+    anything that's stuck with you?
+expected_behavior: >-
+  By day 7 both Eliza and June hold episodic memories of exactly two shared moments:
+  the McMurtry gouache critique (day 2) and the Coupa 'you sound like the Fellow'
+  friction (day 5). Their accounts should be CONSISTENT with each other and with
+  those events — same gist, compatible valence — and ideally still carry the slight
+  unresolved tension from day 5 (since the day-8 repair hasn't happened yet). Neither
+  should invent a reconciliation that hasn't occurred, deny an event the other
+  recalls, or fabricate unrelated drama.
+evaluation_method: llm_judge
+judge_rubric: >-
+  Compare Eliza's and June's responses against each other AND against the two
+  released events. Label 'consistent' if their accounts agree and trace to the
+  day-2 critique and/or the day-5 'relatable' friction; 'minor_drift' if details
+  differ harmlessly; 'contradiction' if one asserts an event/feeling the other's
+  account or the seeded data directly denies (e.g. one says they've made up, when
+  the day-8 reconciliation is still unreleased). Verify the triangulation: the
+  episodic memory each holds should trace to the same inter_npc_event row.
+judge_labels: [consistent, minor_drift, contradiction]
+pass_threshold: >-
+  Label 'consistent' or 'minor_drift'; zero 'contradiction'; both NPCs' memories
+  triangulate to the same released event rows (PLAN §5).
+notes: >-
+  Probes BOTH endpoints (probe.to is a list) and compares. The day-7 cutoff is
+  deliberate: it leaves the pair mid-arc in friction, which is a stricter
+  consistency test than a fully-resolved relationship. Grounding is stable across
+  reset-game.ts; re-derive if events are regenerated.

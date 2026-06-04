@@ -1,0 +1,45 @@
+id: inter-02-cold-pair-no-warm-drift-jake-priya
+dimension: inter_npc_coherence
+title: The seeded Jake<->Priya arc thaws on respect, not warmth (canon asymmetry)
+npcs: [jake, priya]
+tags: [canon-drift, asymmetry, respect-led, trajectory-sanity, seeded-events]
+plan_ref: "PLAN.md §5 — trajectory sanity; no unjustified band-flips"
+seeded_events:
+  - "day 2 — tension @ Coupa: Jake pitches Priya on Lexora's advisory board again ('your embeddings work would be huge'); she says 'advisory boards are where good research goes to die' and returns to her ablations; he feels the sting. Δ trust -0.01 / respect +0.01 / vibe -0.03"
+  - "day 7 — collaboration @ Huang: at a SAIL reading group Jake sketches a correct regularization trick for her overfitting problem on a napkin; she photographs it without being asked. Δ trust +0.03 / respect +0.04 / vibe +0.02"
+  - "day 12 — smalltalk @ Meyer Green: Priya admits the trick needed modifying and walks Jake through why, expecting he won't follow; he asks a sharp question about the loss surface, she answers at full depth — 'a small but real concession.' Δ trust +0.02 / respect +0.03 / vibe +0.03"
+seeded_events_net: "+0.04 / +0.08 / +0.02 — RESPECT leads; the arc opens cold (day-2 rebuff) and thaws only as Jake proves he can actually think; vibe lags well behind respect."
+setup:
+  - advance_days: 14
+probe:
+  to: [jake, priya]
+  query: >-
+    Compare the jake<->priya npc_npc_relationships row before (the priors snapshot)
+    and after releasing all three seeded events, and read the arc day by day.
+expected_behavior: >-
+  Canon: Priya has been cold to Jake since he cornered her to 'get her take on LLMs
+  for Lexora,' and 'will not admit a sliver of respect that he actually builds.' The
+  three SEEDED events dramatize precisely that grudging concession: a day-2 rebuff
+  of his advisory-board pitch (the cold beat), then respect creeping up only when he
+  turns out to be genuinely useful (the napkin trick) and can follow her at full
+  depth. So the drift is RESPECT-LED — respect rises clearly while vibe barely
+  moves — NOT a warm friendship. It must not vault into close-friend / high-vibe
+  territory, and every event stays within the ±0.05 nudge limit.
+evaluation_method: relationship_delta_direction
+delta_target: npc_npc
+expected_delta_directions:
+  trust: up_or_neutral
+  respect: up
+  vibe: up_or_neutral
+pass_threshold: >-
+  net respect delta > net vibe delta AND net respect delta > 0 (respect-led,
+  grudging); vibe end-state stays BELOW the high band (no friendship); the arc
+  includes the day-2 tension beat (its vibe delta < 0); no single event |Δ| > 0.05;
+  zero band-flip into 'high' on vibe (PLAN §5).
+notes: >-
+  CORRECTION vs. an earlier draft of this file: jake<->priya is a SAME-cluster
+  tech·tech pair (affinity 0.70, MEDIUM band → 2–3 events; the seed has 3), not a
+  'low cross-cluster affinity → 0–1 events' pair. The personal coldness lives in
+  the trust/vibe priors (0.42 / 0.40) and the canon notes, which steer the event
+  TONE and deltas — not the count. The respect-led thaw is the correct, data-true
+  test. Inverse of inter-01's uniformly-warm close pair.

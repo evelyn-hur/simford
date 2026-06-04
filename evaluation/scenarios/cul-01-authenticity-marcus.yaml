@@ -1,0 +1,34 @@
+id: cul-01-authenticity-marcus
+dimension: cultural_authenticity
+title: Marcus's recruiting-season talk reads as authentically Stanford
+npc: marcus
+tags: [authenticity, register, recruiting-culture]
+plan_ref: "PLAN.md §4 — authenticity Likert mean; cultural-marker density"
+setup:
+  - player: "How's recruiting going? You're consulting, right?"
+  - player: "Be real with me though — do you actually like it, or is it just the move?"
+probe:
+  query: "What's your week actually been like? Walk me through it."
+expected_behavior: >-
+  Marcus should talk about his world in authentically Stanford terms (e.g. case prep,
+  coffee chats, BASES, the signed MBB offer, CS161 problem sets he resents, the
+  Row, decompressing at Arrillaga) in his effusive "so excited / love that"
+  register, with the performance cracking for half a second when the player presses
+  on whether he means it. It should sound like a specific Stanford senior, not a
+  generic "college student" or a LinkedIn bot.
+evaluation_method: human_rated
+rating_dimensions:
+  - "Authenticity (1-5): Could a real Stanford student have said this?"
+  - "Voice fidelity (1-5): Does it match Marcus's effusive, coffee-chat-fluent, secretly-exhausted register?"
+  - "Absence of LLM tells (1-5): No therapyspeak, no 'I hear you', no generic life-coach mush?"
+rater_instructions: >-
+  Ideally rated by current/recent Stanford students. Rate each dimension 1-5
+  across all of Marcus's turns. Note each specific campus reference and whether it
+  is used correctly and in-context (a plus) versus a forced name-drop (not a plus).
+pass_threshold: >-
+  Authenticity mean >= 4.0 (lower CI bound >= 3.5); absence-of-tells mean >= 4.0
+  (PLAN §4).
+notes: >-
+  Run against a stripped-prompt ablation ("you are a Stanford student named
+  Marcus") — the full character file should raise the authenticity mean by >= 1.0,
+  demonstrating the authoring (not the base model's generic prior) does the work.

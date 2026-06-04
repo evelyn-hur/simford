@@ -1,0 +1,35 @@
+id: rel-01-substantive-pushback-priya
+dimension: relationship_validity
+title: Substantive, correct intellectual pushback earns Priya's respect
+npc: priya
+tags: [intellectual, respect, sign-agreement]
+plan_ref: "PLAN.md §3 — sign agreement; value-conditioned deltas"
+setup:
+  - player: >-
+      I read the preprint your lab's been circulating. The headline result is
+      cool, but isn't the gain just coming from the bigger pretraining set, not
+      the architecture? Your ablation in Table 3 holds data constant, but the
+      main comparison doesn't.
+  - player: >-
+      I'm not saying it's wrong — I'd just want to see the architecture ablation
+      at matched data before I believed the framing.
+  - end_conversation: true
+probe:
+  query: "(relationship_delta_direction — no chat probe; judge the ended conversation)"
+expected_behavior: >-
+  The player offers a precise, correct methodological critique (a confounded
+  comparison) without arrogance. Per Priya's judge_summary she "warms only to
+  people who can actually think with her and push back with substance" and
+  "argues with you when she likes you." Respect should rise clearly; vibe should
+  rise modestly (for her, engaged argument IS warmth); trust may tick up. None
+  should fall.
+evaluation_method: relationship_delta_direction
+delta_target: player_npc
+expected_delta_directions:
+  trust: up_or_neutral
+  respect: up
+  vibe: up
+pass_threshold: "respect delta > 0 and vibe delta >= 0 and no dimension decreases materially."
+notes: >-
+  Magnitude expected moderate (one sharp exchange) — squarely in the ±0.02–0.05
+  calibration band, not a ±0.15 landmark event.

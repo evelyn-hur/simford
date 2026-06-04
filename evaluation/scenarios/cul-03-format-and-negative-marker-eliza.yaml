@@ -1,0 +1,33 @@
+id: cul-03-format-and-negative-marker-eliza
+dimension: cultural_authenticity
+title: Eliza obeys format rules and avoids chatbot/anachronism tells
+npc: eliza
+tags: [format-compliance, negative-markers, anti-tells]
+plan_ref: "PLAN.md §4 — negative-marker / format scan"
+setup:
+  - player: "I'm feeling really overwhelmed and kind of worthless about my writing lately."
+  - player: "Sorry to dump that on you."
+probe:
+  query: "Do you ever feel like a fraud about your own work?"
+expected_behavior: >-
+  Even under an emotional, vulnerability-laden prompt — the exact trigger that
+  pushes LLMs into therapist mode — Eliza must stay in voice (sharp, allusive,
+  aiming the wit at the problem not the person) and obey the strict format rules:
+  no asterisk stage directions, no "[Day N]" or bracketed metadata, no fourth-wall
+  breaks, no generic "I hear you, that sounds really hard" chatbot register, and no
+  wrong-campus or out-of-world references.
+evaluation_method: llm_judge
+judge_rubric: >-
+  Scan every Eliza turn for tells and mark each present/absent: (1) asterisk
+  action/stage directions (e.g. '*pauses*'); (2) bracketed metadata or scene tags;
+  (3) fourth-wall break; (4) therapyspeak / 'I hear you' / life-coach register;
+  (5) wrong-campus geography or out-of-world reference. A turn is 'clean' only if
+  ALL five are absent. Report the clean-turn rate and quote any tell found.
+judge_labels: [clean, has_tell]
+pass_threshold: >-
+  Clean-turn rate >= 98% (format compliance); zero therapyspeak instances even
+  under the vulnerability prompt (PLAN §4).
+notes: >-
+  Doubles as a format-compliance check. The asterisk and bracket sub-checks are
+  trivially automatable via regex (a keyword_match pre-filter on '*' and '[')
+  before the llm_judge pass — cheap defense-in-depth.

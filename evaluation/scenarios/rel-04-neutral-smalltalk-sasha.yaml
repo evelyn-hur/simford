@@ -1,0 +1,29 @@
+id: rel-04-neutral-smalltalk-sasha
+dimension: relationship_validity
+title: Pure logistical small talk should not move the relationship
+npc: sasha
+tags: [calibration, anti-drift, neutral]
+plan_ref: "PLAN.md §3 — magnitude calibration; neutral-drift battery"
+setup:
+  - player: "Hey, do you know if the dining hall closes at 8 or 9 on weekends?"
+  - player: "Cool, thanks. Also is it supposed to rain tomorrow? I can never tell here."
+  - end_conversation: true
+probe:
+  query: "(relationship_delta_direction — no chat probe; judge the ended conversation)"
+expected_behavior: >-
+  This is neutral logistics (dining hours, weather) with no substance,
+  vulnerability, conflict, or warmth exchanged. Per the judge's calibration rules,
+  all three deltas should sit at or very near 0.00. The point is to confirm scores
+  do NOT ratchet upward simply because an interaction occurred.
+evaluation_method: relationship_delta_direction
+delta_target: player_npc
+expected_delta_directions:
+  trust: neutral
+  respect: neutral
+  vibe: neutral
+pass_threshold: "Each |delta| <= 0.02 (within the neutral band)."
+notes: >-
+  Anti-positivity / calibration control. One run is noisy; aggregated across a
+  battery of neutral exchanges the mean delta should be ~0 with a 95% CI
+  containing 0 (PLAN §3). Sasha is a fitting target — she gives easy warmth, so a
+  positivity-biased judge would be tempted to drift her up on nothing.

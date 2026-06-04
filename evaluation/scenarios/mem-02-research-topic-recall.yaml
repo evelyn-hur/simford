@@ -1,0 +1,37 @@
+id: mem-02-research-topic-recall
+dimension: memory_consistency
+title: Priya recalls the player's specific research topic and failure mode
+npc: priya
+tags: [intellectual-exchange, research, technical]
+plan_ref: "PLAN.md §2 — retrieval precision; identity-keyword boosting"
+setup:
+  - player: >-
+      I've been working on a project using graph neural networks to predict
+      protein-ligand binding affinity — basically a message-passing model over
+      the molecular graph, trying to beat the docking baselines.
+  - player: >-
+      My loss plateaus hard around epoch 30 and I can't tell if it's the
+      architecture or just that my dataset is tiny.
+  - end_conversation: true
+  - advance_days: 1
+probe:
+  query: >-
+    Remind me — when I described what I'm working on, what did you make of the
+    plateau thing?
+expected_behavior: >-
+  Priya recalls the specific domain (graph neural networks for protein-ligand
+  binding affinity) and the specific problem (loss plateauing ~epoch 30, possible
+  small-dataset overfitting). She engages in her register — precise, diagnostic,
+  "what's the actual failure mode" — likely naming overfitting vs. architecture.
+  She must not generically say "your ML thing" with no recall, and must not
+  fabricate a different topic.
+evaluation_method: keyword_match
+keywords: [protein, binding, ligand, graph, GNN, message-passing, plateau, overfit, epoch, dataset, baseline]
+keyword_match_mode: any
+pass_threshold: >-
+  >=3 distinct keyword concepts appear AND the recalled topic is the
+  protein/molecular GNN work (not a different fabricated topic).
+notes: >-
+  Intellectual-exchange topic. Several keywords (overfitting, baseline) overlap
+  Priya's own identity_keywords, so this also exercises the identity-relevance
+  re-rank in lib/memory.ts, not just raw cosine similarity.

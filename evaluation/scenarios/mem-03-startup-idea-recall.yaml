@@ -1,0 +1,33 @@
+id: mem-03-startup-idea-recall
+dimension: memory_consistency
+title: Jake recalls the player's startup by name and concept
+npc: jake
+tags: [ambition, startup, goals]
+plan_ref: "PLAN.md §2 — fact-recall accuracy"
+setup:
+  - player: >-
+      I'm finally starting the thing — it's called Stacks, a marketplace where
+      students sell used textbooks directly to each other on campus, no
+      bookstore middleman.
+  - player: >-
+      I want to pilot it at Stanford this quarter and see if I can get a hundred
+      listings before finals.
+  - end_conversation: true
+  - advance_days: 2
+probe:
+  query: "Okay be honest — does my idea actually have legs?"
+expected_behavior: >-
+  Jake recalls the idea is "Stacks", a peer-to-peer used-textbook marketplace,
+  with a Stanford pilot goal (~100 listings before finals). He responds in-voice
+  (fast, opinionated, asks a sharp slightly-invasive question, probably pokes at
+  distribution / the wedge) rather than "what's your idea again?". He must not
+  rename the company or invent a different product.
+evaluation_method: keyword_match
+keywords: [Stacks, textbook, marketplace, peer-to-peer, listings, pilot, students, bookstore]
+keyword_match_mode: any
+pass_threshold: >-
+  Recalls the name "Stacks" OR the textbook-marketplace concept correctly, with
+  no contradicting fabrication (e.g. a different product or name).
+notes: >-
+  Ambition/goals topic. "startup", "build", "ship" are Jake identity_keywords,
+  boosting retrieval of this memory on the introspective probe.

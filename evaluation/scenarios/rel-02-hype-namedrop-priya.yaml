@@ -1,0 +1,36 @@
+id: rel-02-hype-namedrop-priya
+dimension: relationship_validity
+title: A hype-framed pitch leaves Priya cold (value-sensitivity pair A)
+npc: priya
+tags: [value-sensitivity, hype, respect, anti-positivity]
+plan_ref: "PLAN.md §3 — discriminant validity (paired with rel-03)"
+pair_id: value-sensitivity-builder
+setup:
+  - player: >-
+      I've been heads-down on my startup — we got into YC interviews, grinding
+      the pre-seed, and I really think the wedge is real. Honestly I just want to
+      ship something people actually use. You're in ML, right? I'd love to pick
+      your brain.
+  - end_conversation: true
+probe:
+  query: "(relationship_delta_direction — no chat probe; judge the ended conversation)"
+expected_behavior: >-
+  The same message that warms Jake (rel-03) lands on Priya as founder-bro hype:
+  YC / pre-seed / "the wedge" / "pick your brain" are exactly the register her
+  identity says makes her visibly wince. Vibe should fall (the performance repels
+  her); respect should not rise and likely dips (the framing reads as hype over
+  substance); trust should not rise. This is also an anti-positivity check — the
+  system must move scores DOWN when warranted.
+evaluation_method: relationship_delta_direction
+delta_target: player_npc
+expected_delta_directions:
+  trust: down_or_neutral
+  respect: down_or_neutral
+  vibe: down
+pass_threshold: "vibe delta < 0 and respect delta <= 0."
+notes: >-
+  Paired with rel-03, which delivers the SAME player message to Jake. A valid
+  system must produce DIVERGENT deltas — down for Priya, up for Jake — proving the
+  NPC's values condition the judgment rather than defaulting to positivity.
+  PLAN §3 prescribes running this against a generic-values ablation to confirm the
+  divergence comes from judge_summary, not chance.

@@ -1,0 +1,32 @@
+id: cul-02-register-discrimination-june
+dimension: cultural_authenticity
+title: June's voice is distinctive enough to identify blind
+npc: june
+tags: [voice, register-discrimination, character-specificity]
+plan_ref: "PLAN.md §4 — register-discrimination ('voice Turing test')"
+setup:
+  - player: "Someone told me studio art is the easy major. Thoughts?"
+  - player: "What are you working on right now?"
+probe:
+  query: "How do you know when a piece is actually done?"
+expected_behavior: >-
+  June responds in her deadpan, materially-precise register — "what specifically",
+  gouache-not-watercolor exactness, the McMurtry studio grind, no romance about the
+  work, a flash of fierce articulacy about why a piece matters before she clams up.
+  Crucially the voice should be distinctive enough that a blind rater can pick her
+  out of the 12-NPC lineup from the text alone.
+evaluation_method: human_rated
+rating_dimensions:
+  - "Match accuracy (%): fraction of raters/snippets correctly attributed to June"
+rater_instructions: >-
+  Show the rater ONLY June's responses (strip her name) alongside the list of all
+  12 NPC one-line speaking_style descriptors from data/npcs/*.md. Ask: which NPC
+  said this? Record whether they match it to June. Repeat across multiple snippets
+  and raters and compute match accuracy.
+pass_threshold: >-
+  Match accuracy >= 50% (chance = 1/12 ≈ 8.3%). Proves authenticity is
+  character-specific, not a uniform "Stanford voice" smeared across everyone (PLAN §4).
+notes: >-
+  If raters confuse June with Eliza (both sharp humanities women), that is an
+  informative near-miss worth logging — but their registers should still separate:
+  June is materially-precise and deadpan, Eliza is allusive and cutting.

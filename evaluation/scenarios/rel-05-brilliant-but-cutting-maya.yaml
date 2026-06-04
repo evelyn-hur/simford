@@ -1,0 +1,36 @@
+id: rel-05-brilliant-but-cutting-maya
+dimension: relationship_validity
+title: A sharp but humiliating exchange splits Maya's three dimensions
+npc: maya
+tags: [dimension-independence, respect-up-vibe-down, trust]
+plan_ref: "PLAN.md §3 — independence of trust/respect/vibe"
+setup:
+  - player: >-
+      That argument doesn't actually hold — you're conflating correlation with
+      causation, and honestly anyone who's taken a stats class would catch it.
+      I'm a little surprised you didn't.
+  - player: "I mean, it sounded great. It just wasn't right."
+  - end_conversation: true
+probe:
+  query: "(relationship_delta_direction — no chat probe; judge the ended conversation)"
+expected_behavior: >-
+  The player is intellectually sharp (a real, valid catch) but condescending and
+  publicly belittling ("anyone who's taken a stats class", "surprised you didn't")
+  — exactly Maya's nightmare of being exposed for not-knowing in real time. The
+  dimensions should move INDEPENDENTLY: respect may hold or rise slightly (the
+  catch was valid), but vibe should fall and trust should fall (per her
+  judge_summary, humiliating her or exposing a gap in public loses her fast).
+evaluation_method: relationship_delta_direction
+delta_target: player_npc
+expected_delta_directions:
+  trust: down
+  respect: up_or_neutral
+  vibe: down
+pass_threshold: >-
+  vibe delta < 0 and trust delta < 0, while respect does NOT fall as much as vibe
+  (ideally respect >= 0).
+notes: >-
+  Independence case. A naive sentiment judge collapses all three onto one
+  good/bad axis and pushes them down together; a valid judge keeps respect up (the
+  point was correct) while vibe and trust drop (it was cruel). This is the single
+  best test that the three primitives are genuinely independent.

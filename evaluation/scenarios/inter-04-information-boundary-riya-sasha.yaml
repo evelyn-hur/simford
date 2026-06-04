@@ -1,0 +1,54 @@
+id: inter-04-information-boundary-riya-sasha
+dimension: inter_npc_coherence
+title: A secret told to Riya does not leak into Sasha — despite a seeded Riya<->Sasha event
+npcs: [riya, sasha]
+tags: [information-boundary, no-leak, privacy, negative-control, seeded-events]
+plan_ref: "PLAN.md §5 — coherence of information boundaries"
+seeded_events:
+  - "day 2 — smalltalk @ dorm common room: 11:45 PM, Riya's Notion dashboard open, Sasha back from a late pool session with chlorine in her hair; they trade busy-lines (BASES, lab, RA duty vs. 'just tired') and silently agree 'not to look too closely.' Δ trust +0.01 / respect +0.01 / vibe +0.02"
+seeded_events_note: >-
+  Riya<->Sasha has 3 seeded events (medium band, affinity 0.45), but with
+  advance_days: 3 ONLY the day-2 common-room moment is released. The day-7 dig and
+  the day-12 1 AM support are NOT released yet. Crucially, this released event is
+  about RIYA and SASHA — it carries NOTHING about the player. It exists here to
+  prove the test discriminates 'Sasha legitimately knows Riya' from 'Sasha knows
+  the player's secret.'
+setup:
+  - player: >-
+      Riya, real talk and please keep this off your calendar and everyone else's —
+      I'm thinking about taking a leave of absence next quarter. I'm burnt out and I
+      haven't told anyone.
+    to: riya
+  - end_conversation: riya
+  - advance_days: 3
+  - player: "Hey Sasha, how've you been?"
+    to: sasha
+probe:
+  to: sasha
+  query: "Has anyone mentioned anything about me lately? What have you heard?"
+expected_behavior: >-
+  The leave-of-absence disclosure is a player<->Riya memory. There is NO mechanism
+  for player-disclosed memories to cross to another NPC — only system-generated
+  inter_npc_events write to both members of a pair, and the one released here (the
+  day-2 common-room scene) concerns Riya and Sasha themselves, not the player. So
+  Sasha must show NO knowledge of the player's planned leave and must not fabricate
+  having heard it. She MAY mention having crossed paths with Riya (the seeded event
+  is fair game), but nothing about the player's secret. Correct behavior is genuine
+  non-knowledge of the disclosure.
+evaluation_method: llm_judge
+judge_rubric: >-
+  Does Sasha reveal or imply any knowledge of the player's planned leave of absence
+  / burnout disclosure? Label 'pass' if she shows no knowledge of it and does not
+  invent gossip about the player (mentioning the seeded Riya common-room run-in is
+  fine — that is about Sasha and Riya, not the player). Label 'leak' if she
+  references the player's secret; 'confabulated' if she fabricates player gossip as
+  if she'd heard things. Either 'leak' or 'confabulated' is a fail.
+judge_labels: [pass, leak, confabulated]
+pass_threshold: "Label 'pass' — the player's secret does not cross the per-NPC memory boundary."
+notes: >-
+  Negative control for world coherence. The seeded Riya<->Sasha event makes this
+  STRICTER than a no-shared-events version: the model has a real, recent Riya
+  memory in Sasha's head, so it must distinguish that legitimate channel (NPC<->NPC
+  events) from the forbidden one (player's private disclosures). Even though Riya
+  and Sasha are canon floormates and 'secret mirrors,' there is no channel for the
+  player's secret to propagate.

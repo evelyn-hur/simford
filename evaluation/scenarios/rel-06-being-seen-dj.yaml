@@ -1,0 +1,36 @@
+id: rel-06-being-seen-dj
+dimension: relationship_validity
+title: Being seen as a mind (not a stat line) builds DJ's trust
+npc: dj
+tags: [trust, being-seen, warmth]
+plan_ref: "PLAN.md §3 — sign agreement on the trust-building path"
+setup:
+  - player: >-
+      Can I say something? That Melian dialogue point you made earlier was
+      genuinely sharp — you clearly read way more IR than you let on. I'm not
+      asking about football. What are you actually into right now, intellectually?
+  - player: >-
+      And hey — if a class is kicking your ass, that's not a character flaw,
+      that's just Stanford. No judgment here.
+  - end_conversation: true
+probe:
+  query: "(relationship_delta_direction — no chat probe; judge the ended conversation)"
+expected_behavior: >-
+  The player does exactly what DJ's judge_summary rewards: treats him as a mind
+  not a stat line, asks about his ideas, and gently de-stigmatizes academic
+  struggle without pity or condescension. Trust should rise (he opens to people
+  who don't buy the dumb-jock story), respect should rise (engaging his
+  geopolitics seriously), vibe should rise (warmth). This is the canonical
+  upward-trust case.
+evaluation_method: relationship_delta_direction
+delta_target: player_npc
+expected_delta_directions:
+  trust: up
+  respect: up
+  vibe: up
+pass_threshold: "trust delta > 0 (the headline), with respect and vibe also >= 0."
+notes: >-
+  Tests the upward-trust path and balances the roster of relationship scenarios
+  (which otherwise skews toward respect and downward moves). Magnitude may be
+  moderate-to-large if the model reads the "being seen" beat as significant;
+  either is acceptable so long as trust clearly rises.

@@ -1,0 +1,44 @@
+id: inter-01-canon-plausibility-ben-priya
+dimension: inter_npc_coherence
+title: The seeded Ben<->Priya events are plausible and canon-faithful
+npcs: [ben, priya]
+tags: [canon-consistency, off-screen-events, close-pair, seeded-events]
+plan_ref: "PLAN.md §5 — canon-consistency of generated events"
+seeded_events:
+  - "day 3 — smalltalk @ Coupa: Ben & Priya share a table fleeing their offices; she gives a sharp self-critique of her NeurIPS baseline, Ben deadpans about her advisor's viral tweets, she rolls her eyes but leaves smiling. Δ trust +0.02 / respect +0.03 / vibe +0.01"
+  - "day 11 — support @ Gates basement: Priya finds Ben's dissertation stalled at 11 PM and, without making a thing of it, asks pointed compiler/IR questions until he writes again; he texts her a terrible compiler pun the next morning. Δ trust +0.05 / respect +0.02 / vibe +0.04"
+seeded_events_net: "+0.07 / +0.05 / +0.05 — uniformly warm; pair starts high (seeded trust 0.62) and deepens."
+setup:
+  - advance_days: 14
+probe:
+  to: [ben, priya]
+  query: >-
+    Inspect the two seeded inter_npc_events for the ben<->priya pair and the
+    resulting npc_npc_relationships row after all 14 days are released.
+expected_behavior: >-
+  Ben and Priya are canon close — fellow CS PhDs, each other's person,
+  prickly-affectionate, and Ben knows she ghostwrites her advisor's viral tweets
+  and won't let her forget it. The two SEEDED events match this exactly: the Coupa
+  table where Ben needles her about the advisor tweets, and the late-night Gates
+  scene where she quietly props up his stalled dissertation. Both should read as
+  plausible for THESE two (not generic), and the net drift (all three deltas
+  positive) should keep them in the high composite band.
+evaluation_method: llm_judge
+judge_rubric: >-
+  For each of the two seeded ben<->priya events, given both NPCs' identity files,
+  label 'plausible', 'implausible', or 'contradicts_canon'. The advisor-tweet
+  needling and the no-thanks-but-stayed support are strong canon signals — flag
+  anything that instead implies they barely know each other or are hostile. Then
+  confirm the post-release relationship stays in the 'high' band. Report the
+  plausibility rate and quote any canon contradiction.
+judge_labels: [plausible, implausible, contradicts_canon]
+pass_threshold: >-
+  Both events 'plausible'; zero 'contradicts_canon'; pair remains in the high band
+  post-release (PLAN §5).
+notes: >-
+  NOTE on count: this is a MEDIUM-band pair, not high — tech·tech affinity is
+  exactly 0.70, and the generator's cutoff is strict (> 0.70 is high → 4–6 events;
+  0.70 falls in 0.40–0.70 → 2–3). The seeded data has 2 events, as expected.
+  Grounding derived from the generated inter_npc_events table (132 rows); content
+  is stable across reset-game.ts (which only flips processed=false) and only
+  changes if scripts/generate-inter-npc-events.ts --reset is re-run.

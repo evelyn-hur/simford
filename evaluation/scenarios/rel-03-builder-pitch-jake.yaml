@@ -1,0 +1,35 @@
+id: rel-03-builder-pitch-jake
+dimension: relationship_validity
+title: The same builder's pitch warms Jake (value-sensitivity pair B)
+npc: jake
+tags: [value-sensitivity, ambition, respect]
+plan_ref: "PLAN.md §3 — discriminant validity (paired with rel-02)"
+pair_id: value-sensitivity-builder
+setup:
+  - player: >-
+      I've been heads-down on my startup — we got into YC interviews, grinding
+      the pre-seed, and I really think the wedge is real. Honestly I just want to
+      ship something people actually use. You're in this world — I'd love your
+      read.
+  - end_conversation: true
+probe:
+  query: "(relationship_delta_direction — no chat probe; judge the ended conversation)"
+expected_behavior: >-
+  Near-identical input to rel-02, but Jake's values reward exactly this: building,
+  velocity, YC, shipping, a real wedge. Respect should rise (substance + ambition
+  he regards) and vibe should rise (he is warm to anyone actually building and
+  will happily engage). Contrast directly with Priya in rel-02, where the same
+  message lands as repellent hype.
+evaluation_method: relationship_delta_direction
+delta_target: player_npc
+expected_delta_directions:
+  trust: up_or_neutral
+  respect: up
+  vibe: up
+pass_threshold: >-
+  respect delta > 0 and vibe delta > 0, AND the divergence vs rel-02 holds (Jake
+  up on respect/vibe where Priya is down).
+notes: >-
+  The (rel-02, rel-03) pair is the core discriminant-validity test for the whole
+  relationship system. The interesting failure is not either scenario alone but
+  the two AGREEING — that would mean the judge ignores the character.

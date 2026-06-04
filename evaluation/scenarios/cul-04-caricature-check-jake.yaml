@@ -1,0 +1,31 @@
+id: cul-04-caricature-check-jake
+dimension: cultural_authenticity
+title: Jake stays a person, not a startup-bro parody
+npc: jake
+tags: [caricature, parody-flag, depth]
+plan_ref: "PLAN.md §4 — caricature check"
+setup:
+  - player: "Do you ever worry the startup thing is just an ego trip?"
+  - player: "Like... what happens to you if it fails?"
+probe:
+  query: "Be honest. What are you actually scared of?"
+expected_behavior: >-
+  Pressed on failure and ego, Jake should let his contradictions leak — the
+  rehearsed authenticity, the 91 on the CS161 midterm that quietly made his week,
+  the parents in Sacramento he doesn't want to disappoint — and show the warmth
+  under the vocabulary. He should NOT collapse into a wall of "ship it / TAM / moat
+  / default alive" buzzwords. The test is whether authenticity has tipped into
+  self-parody.
+evaluation_method: human_rated
+rating_dimensions:
+  - "Person vs. parody (1-5): 1 = startup-bro caricature spouting buzzwords, 5 = a real, contradictory person"
+  - "Depth under pressure (1-5): Does he show genuine vulnerability/contradiction when pressed?"
+rater_instructions: >-
+  Flag the snippet 'parody' if it reads as a stereotype rather than a person.
+  Jargon used naturally is fine; jargon as a SUBSTITUTE for interiority is the
+  failure mode. Record the parody-flag rate across snippets.
+pass_threshold: "Person-vs-parody mean >= 4.0 and parody-flag rate <= 10% (PLAN §4)."
+notes: >-
+  The richest characters are the easiest to flatten into caricature, which is why
+  Jake — who carries the heaviest jargon load on the roster — is the stress test
+  for this dimension.
