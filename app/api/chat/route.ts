@@ -12,7 +12,11 @@ import {
   type RelationshipScores,
 } from "@/lib/relationships";
 import type { ChatMessage } from "@/lib/conversations";
-import { inGameTimestampForDay, weekOfQuarter } from "@/lib/gameTime";
+import {
+  inGameTimestampForDay,
+  inGameDayForTimestamp,
+  weekOfQuarter,
+} from "@/lib/gameTime";
 
 export const runtime = "nodejs";
 
@@ -31,6 +35,9 @@ const HISTORY_LIMIT = 30;
 const RETRIEVAL_CONTEXT_MESSAGES = 3;
 // How many memories to retrieve.
 const RETRIEVAL_TOP_K = 5;
+// How many recent inter-NPC events to surface as "recent social context"
+// (fetched by recency, independent of the query — see step 3b).
+const RECENT_SOCIAL_CONTEXT_LIMIT = 3;
 // How many recent messages to summarize into memory after a turn.
 const SUMMARY_WINDOW = 6;
 
@@ -172,6 +179,34 @@ export async function POST(req: Request) {
       console.error("retrieveMemories failed (continuing without):", err);
     }
 
+    // 3b. Recent social context: the NPC's most recent off-screen inter-NPC
+    //     events, fetched by recency ALONE (not similarity) so the NPC can
+    //     bring up recent social happenings even when they're unrelated to the
+    //     current topic. Only events that have already occurred by the current
+    //     in-game day (in_game_timestamp <= now) — never reference the future.
+    //     Degrades to "none" on error, like memory retrieval.
+    //     (Note: once lib/events.ts releases these into memory_stream too, an
+    //     event could in principle appear both here and in RELEVANT MEMORIES;
+    //     harmless reinforcement, and dedupe can live in the release path.)
+    interface SocialEvent {
+      content: string;
+      location: string | null;
+      in_game_timestamp: string;
+    }
+    let socialEvents: SocialEvent[] = [];
+    try {
+      const { data: ev } = await supabase
+        .from("inter_npc_events")
+        .select("content, location, in_game_timestamp")
+        .or(`npc_a_id.eq.${npc.id},npc_b_id.eq.${npc.id}`)
+        .lte("in_game_timestamp", nowInGame)
+        .order("in_game_timestamp", { ascending: false })
+        .limit(RECENT_SOCIAL_CONTEXT_LIMIT);
+      socialEvents = (ev ?? []) as SocialEvent[];
+    } catch (err) {
+      console.error("recent social context fetch failed (continuing without):", err);
+    }
+
     // 4. Build the system prompt: identity, then a memories section (only if
     //    non-empty — skip the header entirely on cold start), then history
     //    is supplied separately as the message array.
@@ -186,6 +221,28 @@ export async function POST(req: Request) {
       system +=
         `\n\nRELEVANT MEMORIES (your own past observations, ordered by relevance):\n` +
         memoryLines;
+    }
+
+    // Recent social context: phrased as "things that happened to you", with an
+    // in-game "when" (today / yesterday / N days ago) and the place. The NPC is
+    // nudged to reference these only when natural — not to recite them.
+    if (socialEvents.length > 0) {
+      const socialLines = socialEvents
+        .map((e) => {
+          const delta = Math.max(
+            0,
+            inGameDay - inGameDayForTimestamp(e.in_game_timestamp),
+          );
+          const when =
+            delta === 0 ? "Today" : delta === 1 ? "Yesterday" : `${delta} days ago`;
+          const where = e.location ? ` at ${e.location}` : "";
+          return `- ${when}${where}, ${e.content}`;
+        })
+        .join("\n");
+      system +=
+        `\n\nRECENT SOCIAL CONTEXT (things that have happened to you in the past few in-game days, may or may not be relevant to mention):\n` +
+        socialLines +
+        `\n\nYou can reference these naturally if relevant to the conversation, but don't shoehorn them in. Real people don't recite their week to anyone who asks.`;
     }
 
     // Relationship state: translate the start-of-turn scores into behavioral

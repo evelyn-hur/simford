@@ -110,6 +110,12 @@ export interface WriteEpisodicMemoryParams {
   sourceConversationId?: string | null;
   /** ISO timestamptz string for the in-game clock, or null. */
   inGameTimestamp?: string | null;
+  /**
+   * Override the importance (1–10) instead of scoring it with the LLM. Used
+   * when the caller already knows the salience (e.g. released inter-NPC events
+   * derive importance from their relationship-delta magnitude).
+   */
+  importance?: number;
 }
 
 /**
@@ -122,21 +128,26 @@ async function writeMemory({
   content,
   sourceConversationId = null,
   inGameTimestamp = null,
+  importance: importanceOverride,
 }: {
   npcId: string;
   memoryType: Memory["memoryType"];
   content: string;
   sourceConversationId?: string | null;
   inGameTimestamp?: string | null;
+  importance?: number;
 }): Promise<string> {
   const trimmed = content.trim();
   if (!trimmed) {
     throw new Error("writeMemory: content is empty");
   }
 
+  // Embed always; only score importance with the LLM when no override is given.
   const [embedding, importance] = await Promise.all([
     generateEmbedding(trimmed),
-    scoreImportance(trimmed),
+    importanceOverride != null
+      ? Promise.resolve(Math.min(10, Math.max(1, Math.round(importanceOverride))))
+      : scoreImportance(trimmed),
   ]);
 
   const supabase = createServiceRoleClient();
@@ -172,6 +183,7 @@ export async function writeEpisodicMemory({
   content,
   sourceConversationId = null,
   inGameTimestamp = null,
+  importance,
 }: WriteEpisodicMemoryParams): Promise<string> {
   return writeMemory({
     npcId,
@@ -179,6 +191,7 @@ export async function writeEpisodicMemory({
     content,
     sourceConversationId,
     inGameTimestamp,
+    importance,
   });
 }
 

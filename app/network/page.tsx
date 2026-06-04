@@ -1,16 +1,25 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import NetworkGraph, {
   type NetworkData,
   type NetworkEdge,
 } from "@/components/NetworkGraph";
 import CofounderPanel, { type CofounderPair } from "@/components/CofounderPanel";
+import RecentChangesPanel, {
+  type RecentChange,
+} from "@/components/RecentChangesPanel";
 
 interface Timeline {
   currentDay: number;
   playerEdgesByDay: Record<string, NetworkEdge[]>;
+  npcEdgesByDay: Record<string, NetworkEdge[]>;
+}
+
+interface RecentChangesResponse {
+  currentDay: number;
+  changes: RecentChange[];
 }
 
 const FILTERS: { key: string; label: string; hint?: string }[] = [
@@ -42,6 +51,12 @@ export default function NetworkPage() {
   // reasoning LLM calls).
   const [pairs, setPairs] = useState<CofounderPair[] | null>(null);
   const [pairsError, setPairsError] = useState<string | null>(null);
+  // Recent system-driven changes (polled) + a key that, when bumped, re-runs the
+  // graph/timeline/pairs fetches. Bumped when the polled in-game day increases.
+  const [recentChanges, setRecentChanges] = useState<RecentChange[] | null>(null);
+  const [recentError, setRecentError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const lastDayRef = useRef<number | null>(null);
 
   const isLive = timeline == null || day == null || day >= timeline.currentDay;
 
@@ -50,9 +65,15 @@ export default function NetworkPage() {
   // live set before the timeline loads). The "Show player" toggle drops them.
   const graph = useMemo(() => {
     if (!data) return null;
-    const npcEdges = data.edges.filter(
-      (e) => e.source !== "player" && e.target !== "player",
-    );
+    // NPC↔NPC edges come from the scrubbed-to day's snapshot (which carries the
+    // systemChanged flags); fall back to the constant live set before the
+    // timeline loads.
+    const npcEdges: NetworkEdge[] =
+      timeline && day != null
+        ? timeline.npcEdgesByDay[String(day)] ?? []
+        : data.edges.filter(
+            (e) => e.source !== "player" && e.target !== "player",
+          );
     let playerEdges: NetworkEdge[] = [];
     if (showPlayer) {
       playerEdges =
@@ -90,7 +111,7 @@ export default function NetworkPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [refreshKey]);
 
   // Fetch the top cofounder pairs separately.
   useEffect(() => {
@@ -117,7 +138,7 @@ export default function NetworkPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [refreshKey]);
 
   // Fetch the historical timeline snapshots (cached client-side; the slider just
   // indexes into them, so dragging never refetches or recomputes).
@@ -131,14 +152,61 @@ export default function NetworkPage() {
         setTimeline({
           currentDay: json.currentDay,
           playerEdgesByDay: json.playerEdgesByDay,
+          npcEdgesByDay: json.npcEdgesByDay,
         });
-        setDay(json.currentDay); // start at "live"
+        setDay(json.currentDay); // snap to live on (re)load
       } catch {
         // Non-critical: without the timeline the graph just stays at live state.
       }
     })();
     return () => {
       cancelled = true;
+    };
+  }, [refreshKey]);
+
+  // Live update: poll the lightweight recent-changes endpoint (and refetch on
+  // tab focus). It feeds the panel, and when the in-game day has advanced
+  // (elsewhere — the clock lives on the chat page), bump refreshKey to refetch
+  // the graph, timeline, and pairs. The first poll just seeds the day baseline.
+  useEffect(() => {
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const res = await fetch("/api/network/recent-changes");
+        const json = (await res.json()) as RecentChangesResponse & {
+          error?: string;
+        };
+        if (cancelled) return;
+        if (!res.ok || json.error) {
+          setRecentError(json.error ?? `Request failed (${res.status})`);
+          return;
+        }
+        setRecentError(null);
+        setRecentChanges(json.changes);
+        if (lastDayRef.current == null) {
+          lastDayRef.current = json.currentDay;
+        } else if (json.currentDay > lastDayRef.current) {
+          lastDayRef.current = json.currentDay;
+          setRefreshKey((k) => k + 1);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setRecentError(
+            e instanceof Error ? e.message : "Failed to load changes",
+          );
+        }
+      }
+    };
+    poll();
+    const id = setInterval(poll, 6000);
+    const onFocus = () => poll();
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
     };
   }, []);
 
@@ -267,6 +335,12 @@ export default function NetworkPage() {
           }}
         />
       )}
+
+      <RecentChangesPanel
+        changes={recentChanges}
+        loading={recentChanges === null && recentError === null}
+        error={recentError}
+      />
 
       <CofounderPanel
         pairs={pairs}

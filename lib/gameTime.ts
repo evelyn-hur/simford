@@ -14,6 +14,14 @@ export function inGameTimestampForDay(day: number): string {
   return new Date(QUARTER_START_MS + Math.max(1, day) * DAY_MS).toISOString();
 }
 
+/**
+ * In-game day for a given in-game timestamp — the inverse of
+ * inGameTimestampForDay (exact for the day ≥ 1 values we ever store).
+ */
+export function inGameDayForTimestamp(iso: string): number {
+  return Math.round((new Date(iso).getTime() - QUARTER_START_MS) / DAY_MS);
+}
+
 /** Week number within the quarter (day 1–7 = week 1). */
 export function weekOfQuarter(day: number): number {
   return Math.floor((Math.max(1, day) - 1) / 7) + 1;

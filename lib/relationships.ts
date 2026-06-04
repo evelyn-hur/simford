@@ -364,3 +364,105 @@ export async function applyRelationshipDeltas({
 
   return newScores;
 }
+
+export interface ApplyNpcNpcRelationshipDeltasParams {
+  npcAId: string;
+  npcBId: string;
+  deltas: RelationshipDeltas;
+  /** The inter_npc_event that caused this shift, recorded on the audit row. */
+  interNpcEventId?: string | null;
+}
+
+/**
+ * Apply deltas to an NPC↔NPC relationship — the off-screen, system-driven
+ * counterpart to applyRelationshipDeltas. Updates the undirected
+ * `npc_npc_relationships` row (clamped to [0, 1]) and appends a SYSTEM audit row
+ * to `relationship_events`: player_id = NULL (distinguishes it from
+ * player-driven changes), the pair in (npc_id, npc_b_id), and a link to the
+ * causing inter_npc_event. Returns the new scores.
+ *
+ * The pair is canonicalized to (a < b) to match `npc_npc_relationships`, which
+ * stores one row per unordered pair with npc_a_id alphabetically first.
+ * Sequential (not a single transaction) — acceptable at this scale; state is
+ * written before the audit row so a failed audit insert leaves state correct.
+ */
+export async function applyNpcNpcRelationshipDeltas({
+  npcAId,
+  npcBId,
+  deltas,
+  interNpcEventId = null,
+}: ApplyNpcNpcRelationshipDeltasParams): Promise<RelationshipScores> {
+  const supabase = createServiceRoleClient();
+
+  // Canonical order: npc_a_id is the alphabetically-earlier id.
+  const [aId, bId] = npcAId < npcBId ? [npcAId, npcBId] : [npcBId, npcAId];
+
+  // 1. Read current pair scores (all 66 pairs are seeded; 0.5 is a safety net).
+  const { data: existing, error: readError } = await supabase
+    .from("npc_npc_relationships")
+    .select("trust, respect, vibe")
+    .eq("npc_a_id", aId)
+    .eq("npc_b_id", bId)
+    .maybeSingle();
+
+  if (readError) {
+    throw new Error(`Failed to read NPC↔NPC relationship: ${readError.message}`);
+  }
+
+  const base: RelationshipScores = existing ?? {
+    trust: 0.5,
+    respect: 0.5,
+    vibe: 0.5,
+  };
+
+  const newScores: RelationshipScores = {
+    trust: clampScore(base.trust + deltas.delta_trust),
+    respect: clampScore(base.respect + deltas.delta_respect),
+    vibe: clampScore(base.vibe + deltas.delta_vibe),
+  };
+
+  // 2. Upsert the authoritative current state first (archetype_affinity_prior
+  //    is not in the payload, so it's preserved on update).
+  const { error: upsertError } = await supabase
+    .from("npc_npc_relationships")
+    .upsert(
+      {
+        npc_a_id: aId,
+        npc_b_id: bId,
+        trust: newScores.trust,
+        respect: newScores.respect,
+        vibe: newScores.vibe,
+        last_updated: new Date().toISOString(),
+      },
+      { onConflict: "npc_a_id,npc_b_id" },
+    );
+
+  if (upsertError) {
+    throw new Error(
+      `Failed to update NPC↔NPC relationship: ${upsertError.message}`,
+    );
+  }
+
+  // 3. Append the SYSTEM audit row.
+  const { error: eventError } = await supabase
+    .from("relationship_events")
+    .insert({
+      player_id: null,
+      npc_id: aId,
+      npc_b_id: bId,
+      delta_trust: deltas.delta_trust,
+      delta_respect: deltas.delta_respect,
+      delta_vibe: deltas.delta_vibe,
+      reasoning: deltas.reasoning || null,
+      conversation_id: null,
+      inter_npc_event_id: interNpcEventId,
+    });
+
+  if (eventError) {
+    throw new Error(
+      `NPC↔NPC relationship updated but failed to log event: ${eventError.message}`,
+    );
+  }
+
+  return newScores;
+}

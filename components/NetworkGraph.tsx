@@ -53,6 +53,8 @@ export interface NetworkEdge {
   close_friend_score: number;
   study_partner_score: number;
   frenemy_score: number;
+  /** NPC↔NPC tie shifted by a released off-screen event (as of the viewed day). */
+  systemChanged?: boolean;
 }
 
 export interface NetworkData {
@@ -75,6 +77,9 @@ export interface NetworkGraphProps {
 
 const CARDINAL = "#8C1515";
 const CREAM = "#fbfaf7";
+// Accent for NPC↔NPC ties shifted by a released off-screen (system) event —
+// a violet that reads distinctly against every lens palette below.
+const SYSTEM_ACCENT: [number, number, number] = [124, 58, 237];
 const NODE_RADIUS = 5; // uniform medium
 const GROUPS = Object.keys(ARCHETYPE_GROUP_LABELS) as ArchetypeGroup[];
 
@@ -295,6 +300,9 @@ export default function NetworkGraph({
           l.vibe,
         )}</div>` +
         `<div style="opacity:.85">${label}: ${pct(linkStrength(l, mode))}</div>` +
+        (l.systemChanged
+          ? `<div style="color:#7c3aed;font-weight:600;margin-top:2px">· recently shifted (off-screen event)</div>`
+          : "") +
         `</div>`
       );
     },
@@ -319,7 +327,8 @@ export default function NetworkGraph({
       if (selectedPair) return pairEdge(l) ? w + 2 : w * 0.8;
       if (selectedNodeId) return connectsTo(l, selectedNodeId) ? w + 1 : w;
       if (hoveredNodeId && connectsTo(l, hoveredNodeId)) return w + 0.6;
-      return w;
+      // System-shifted ties read a touch heavier so the accent is legible.
+      return l.systemChanged ? w + 0.8 : w;
     },
     linkColor: (l: GraphLink) => {
       const s = norm(linkStrength(l, mode));
@@ -343,6 +352,12 @@ export default function NetworkGraph({
         return connectsTo(l, hoveredNodeId)
           ? `rgba(${mr}, ${mg}, ${mb}, ${Math.max(0.55, 0.2 + s * 0.6)})`
           : `rgba(${mr}, ${mg}, ${mb}, ${(0.15 + s * 0.5) * 0.6})`;
+      }
+      // Default view: ties shifted by a released off-screen event take the
+      // violet system accent so they stand out from the constant-prior ties.
+      if (l.systemChanged) {
+        const [sr, sg, sb] = SYSTEM_ACCENT;
+        return `rgba(${sr}, ${sg}, ${sb}, ${0.5 + s * 0.4})`;
       }
       return `rgba(${mr}, ${mg}, ${mb}, ${0.15 + s * 0.55})`;
     },
@@ -424,6 +439,15 @@ export default function NetworkGraph({
             <span className="text-neutral-400">({n})</span>
           </span>
         ))}
+        {edges.some((e) => e.systemChanged) && (
+          <span className="inline-flex items-center gap-1.5 text-xs text-neutral-600">
+            <span
+              className="h-2.5 w-2.5 rounded-full"
+              style={{ backgroundColor: "#7c3aed" }}
+            />
+            recently shifted
+          </span>
+        )}
         {(selectedNodeId || selectedPair) && (
           <span className="text-xs text-neutral-400">
             ·{" "}

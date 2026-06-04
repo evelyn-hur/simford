@@ -4,6 +4,7 @@ import { advanceInGameDay } from "@/lib/gameState";
 import { consolidateMemoriesForNPC } from "@/lib/memory";
 import { inGameTimestampForDay } from "@/lib/gameTime";
 import { endConversation } from "@/lib/conversationEnd";
+import { releaseEventsForDay } from "@/lib/events";
 
 export const runtime = "nodejs";
 
@@ -95,6 +96,14 @@ export async function POST(req: Request) {
         console.error("advance-day consolidation sweep failed:", e);
       }
     })();
+
+    // Fire-and-forget #3: release the off-screen NPC↔NPC events that have now
+    // occurred by this in-game day — writes episodic memories to both NPCs,
+    // applies the relationship deltas to npc_npc_relationships, and logs system
+    // relationship_events. Non-blocking; the clock must not wait on embeddings.
+    void releaseEventsForDay(playerId, inGameDay).catch((e) =>
+      console.error("advance-day inter-NPC event release failed:", e),
+    );
 
     return NextResponse.json({ in_game_day: inGameDay });
   } catch (err) {
