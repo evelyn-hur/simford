@@ -6,6 +6,8 @@ import {
   type RelationshipDeltas,
 } from "@/lib/relationships";
 import { inGameTimestampForDay } from "@/lib/gameTime";
+import { anthropic } from "@/lib/anthropic";
+import type Anthropic from "@anthropic-ai/sdk";
 
 interface StoredDeltas {
   trust?: number;
@@ -35,6 +37,42 @@ function importanceFromDeltas(d: StoredDeltas | null): number {
   // Max total ≈ 0.15 (three ±0.05 deltas) → ~8; a neutral event → ~2. These are
   // low-salience background moments, so they sit below conversation memories.
   return Math.min(10, Math.max(1, Math.round(2 + (total / 0.15) * 6)));
+}
+
+// Inter-NPC events are generated in the third person ("Eliza told June ..."), so
+// each participant has to translate the narration into their own perspective at
+// recall time — and they get it wrong, flipping who did what to whom. Rewrite
+// each NPC's copy into THEIR first person so there is nothing to mis-read.
+const MEMORY_REWRITE_MODEL = "claude-haiku-4-5-20251001";
+
+async function toFirstPersonMemory(
+  content: string,
+  selfName: string,
+  otherName: string,
+): Promise<string> {
+  try {
+    const message = await anthropic.messages.create({
+      model: MEMORY_REWRITE_MODEL,
+      max_tokens: 220,
+      system:
+        `Rewrite a third-person account of an interaction into the FIRST-PERSON ` +
+        `memory of one participant. "I"/"me"/"my" = ${selfName}; refer to the other ` +
+        `person as ${otherName}. Preserve every concrete fact, and especially WHO ` +
+        `DID WHAT TO WHOM — do NOT flip the direction (if ${selfName} did or said ` +
+        `something to ${otherName}, keep it that way around). Keep it to 1-2 ` +
+        `sentences. Output only the rewritten memory, with no preamble.`,
+      messages: [{ role: "user", content }],
+    });
+    const text = message.content
+      .filter((b): b is Anthropic.TextBlock => b.type === "text")
+      .map((b) => b.text)
+      .join("")
+      .trim();
+    return text || content;
+  } catch (err) {
+    console.error("toFirstPersonMemory failed, using original content:", err);
+    return content;
+  }
 }
 
 /**
@@ -83,6 +121,11 @@ export async function releaseEventsForDay(
     );
   }
 
+  // NPC display names, for rewriting each event into a participant's first person.
+  const { data: npcRows } = await supabase.from("npcs").select("id, name");
+  const npcName: Record<string, string> = {};
+  for (const n of npcRows ?? []) npcName[n.id as string] = n.name as string;
+
   const summary: ReleaseSummary = { released: 0, failed: 0, pairs: [] };
 
   for (const ev of (events ?? []) as InterNpcEventRow[]) {
@@ -90,17 +133,24 @@ export async function releaseEventsForDay(
       const deltas = ev.relationship_deltas ?? {};
       const importance = importanceFromDeltas(deltas);
 
-      // a. Episodic memory to BOTH NPCs (embeddings handled inside).
+      // a. Episodic memory to BOTH NPCs, each rewritten into THEIR first person
+      //    so they don't mis-read who did what to whom at recall time.
+      const aName = npcName[ev.npc_a_id] ?? ev.npc_a_id;
+      const bName = npcName[ev.npc_b_id] ?? ev.npc_b_id;
+      const [contentA, contentB] = await Promise.all([
+        toFirstPersonMemory(ev.content, aName, bName),
+        toFirstPersonMemory(ev.content, bName, aName),
+      ]);
       await Promise.all([
         writeEpisodicMemory({
           npcId: ev.npc_a_id,
-          content: ev.content,
+          content: contentA,
           inGameTimestamp: ev.in_game_timestamp,
           importance,
         }),
         writeEpisodicMemory({
           npcId: ev.npc_b_id,
-          content: ev.content,
+          content: contentB,
           inGameTimestamp: ev.in_game_timestamp,
           importance,
         }),

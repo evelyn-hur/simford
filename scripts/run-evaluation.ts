@@ -67,7 +67,9 @@ const DEFAULT_SETTLE_MS = Number(process.env.EVAL_SETTLE_MS) || 2000;
 
 // A delta within ±this is "neutral" (matches the scenarios' calibration band).
 const NEUTRAL_BAND = 0.02;
-const RELEASE_POLL_TIMEOUT_MS = 30_000;
+// Release now rewrites each event into both NPCs' first person (2 Haiku calls
+// per event), so clearing a backlog can take a while — wait generously.
+const RELEASE_POLL_TIMEOUT_MS = 120_000;
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
