@@ -1,3 +1,5 @@
+import RestartButton from "@/components/RestartButton";
+
 export default function Header() {
   return (
     <header className="border-b border-neutral-200">
@@ -5,7 +7,7 @@ export default function Header() {
         <span className="text-lg font-semibold tracking-tight">
           Simford
         </span>
-        <nav className="flex gap-6 text-sm text-neutral-600">
+        <nav className="flex items-center gap-6 text-sm text-neutral-600">
           <a href="/" className="hover:text-neutral-900">
             Home
           </a>
@@ -15,6 +17,7 @@ export default function Header() {
           <a href="/network" className="hover:text-neutral-900">
             Network
           </a>
+          <RestartButton />
         </nav>
       </div>
     </header>
