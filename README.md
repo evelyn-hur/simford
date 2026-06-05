@@ -4,6 +4,11 @@ A chat-based game where twelve Stanford characters know each other, remember you
 
 **[Live demo](https://simford.vercel.app/) · [Demo video](https://www.youtube.com/watch?v=0J9G5CuoCWM) · [Eval results](#evaluation)**
 
+<img width="1470" height="794" alt="Screenshot 2026-06-05 at 12 00 09 AM" src="https://github.com/user-attachments/assets/3fbdbd56-3bcd-49de-80ea-b54a27921fc0" />
+<img width="1470" height="796" alt="Screenshot 2026-06-05 at 12 33 59 AM" src="https://github.com/user-attachments/assets/840e688e-560f-4ae6-80f0-cd978f5bb0e4" />
+<img width="1470" height="798" alt="Screenshot 2026-06-05 at 12 33 30 AM" src="https://github.com/user-attachments/assets/26c3e39d-b874-4eac-bb5c-67855c9d7b84" />
+
+
 ## What this is
 
 Twelve LLM-powered Stanford characters — a startup-bro CS major, an ML PhD student, a pre-med with second thoughts, a studio art major, an athlete hiding academic struggles, and seven others. You can chat with any of them. They remember what you said in past conversations, form opinions of you across three independent dimensions (trust, respect, vibe), and exist in a social network with each other that shifts over in-game time.
