@@ -9,7 +9,9 @@
     "lint": "next lint",
     "seed:npcs": "tsx scripts/seed-npcs.ts",
     "eval": "tsx scripts/run-evaluation.ts",
-    "rate": "tsx evaluation/rate.ts"
+    "rate": "tsx evaluation/rate.ts",
+    "analyze-eval": "tsx scripts/analyze-eval.ts",
+    "reset": "tsx scripts/reset-game.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.27.3",
