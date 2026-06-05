@@ -3,6 +3,7 @@
 A chat-based simulation game where twelve Stanford characters know each other, remember you across sessions, and have relationships that evolve over time.
 
 **[Live demo](https://simford.vercel.app/) · [Demo video](https://www.youtube.com/watch?v=0J9G5CuoCWM) · [Eval results](#evaluation)**
+
 <img width="1470" height="825" alt="Screenshot 2026-06-05 at 12 40 53 AM" src="https://github.com/user-attachments/assets/3eb9ec34-8dea-4a37-9253-760635c944e4" />
 
 
@@ -23,15 +24,18 @@ Simford sits between them: small cast, real social architecture, you as a recurr
 ## How it works
 
 Twelve NPCs defined as Markdown files with identity prompts, speaking style, identity-relevance keywords, and a condensed `judge_summary` for the relationship judge. Each has hidden depths that only surface once player trust is high enough.
+
 <img width="1470" height="794" alt="Screenshot 2026-06-05 at 12 00 09 AM" src="https://github.com/user-attachments/assets/3fbdbd56-3bcd-49de-80ea-b54a27921fc0" />
 
 Memory is stored per-NPC in a Postgres + pgvector store. After each player turn, the conversation gets summarized into episodic memories with importance scores and embeddings. Retrieval combines four signals: semantic similarity, importance, recency, and a tunable identity-relevance term (word-boundary keyword match against the NPC's keyword list). At end-of-day, episodic memories consolidate into higher-level semantic reflections.
 
 Relationships are explicit and three-dimensional (trust / respect / vibe), updated per conversation (not per turn — that was an early refactor for cost and design clarity) by an LLM-as-judge that emits deltas with reasoning. The judge is conditioned on each NPC's values, so the same exchange affects different characters differently. Relationship state feeds back into the prompt — low-trust Jake is guarded, high-trust Jake opens up.
+
 <img width="1470" height="798" alt="Screenshot 2026-06-05 at 12 33 30 AM" src="https://github.com/user-attachments/assets/3209347c-39fc-4aa3-af15-d8f0f4d32fb9" />
 
 
 Inter-NPC dynamics: I pre-generated around 130 inter-NPC events covering 14 in-game days, weighted by archetype affinity (tech-tech pairs interact more than tech-humanities pairs). When the player advances in-game time, events release into both involved NPCs' memory streams with each NPC carrying their own perspective on what happened. NPC↔NPC relationship state shifts accordingly. The result is a social network whose state visibly evolves as time progresses.
+
 <img width="1470" height="796" alt="Screenshot 2026-06-05 at 12 33 59 AM" src="https://github.com/user-attachments/assets/840e688e-560f-4ae6-80f0-cd978f5bb0e4" />
 
 A `/network` page renders the live social graph (react-force-graph-2d), with filters for different derived metrics (cofounder potential, close friends, study partners, frenemies) and a panel showing recent system-driven relationship changes with their causing events.
