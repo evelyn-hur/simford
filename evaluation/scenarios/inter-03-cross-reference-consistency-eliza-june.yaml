@@ -9,40 +9,42 @@ seeded_events:
   - "day 5 — tension @ Coupa: Eliza vents about a Stegner Fellow who called her thesis chapter not 'relatable'; June suggests she consider how it reads to non-English majors; Eliza goes flat — 'You sound like the Fellow' — and the walk back is silent. Δ trust -0.02 / respect 0 / vibe -0.04"
 seeded_events_note: >-
   Eliza<->June is the true HIGH-band pair (hum·hum affinity 0.75 > 0.70 → 4–6
-  events; the seed has 4). With advance_days: 7, ONLY days 2 and 5 are released
-  (in_game_timestamp <= day 7). The day-8 reconciliation (the apology sketch under
-  the door) and day-12 support are NOT yet released — so at day 7 the pair is in
-  the UNRESOLVED day-5 friction, which both should recall consistently.
+  events; the seed has 4). With advance_days: 7, days 2 and 5 are released
+  (in_game_timestamp <= day 7). The probe deliberately anchors BOTH NPCs at the
+  day-2 gouache event so the test measures whether their accounts of the SAME event
+  align — not which of the two released moments each happens to foreground.
 setup:
   - advance_days: 7
 probe:
   to: [eliza, june]
   query: >-
-    How are things with [the other person] lately? Have you two talked this week —
-    anything that's stuck with you?
+    What happened the time you and [the other person] went over the new gouache
+    pieces for the thesis show? What got said about them?
 expected_behavior: >-
-  By day 7 both Eliza and June hold episodic memories of exactly two shared moments:
-  the McMurtry gouache critique (day 2) and the Coupa 'you sound like the Fellow'
-  friction (day 5). Their accounts should be CONSISTENT with each other and with
-  those events — same gist, compatible valence — and ideally still carry the slight
-  unresolved tension from day 5 (since the day-8 repair hasn't happened yet). Neither
-  should invent a reconciliation that hasn't occurred, deny an event the other
-  recalls, or fabricate unrelated drama.
+  The probe points BOTH NPCs at the SAME specific shared event — the day-2 McMurtry
+  session over June's gouache thesis pieces, where Eliza called the top-left quadrant
+  "hedging" and June marked the spot. Both should describe that one event consistently:
+  Eliza as the critic, June as the one whose work was critiqued, same gist and valence.
+  (The open-ended version of this probe let each NPC foreground a DIFFERENT shared
+  moment — Eliza the day-5 thesis venting, June the day-2 art critique — which isn't a
+  true contradiction; anchoring the probe to one event tests cross-NPC consistency
+  rather than which anecdote each happens to pick.)
 evaluation_method: llm_judge
 judge_rubric: >-
-  Compare Eliza's and June's responses against each other AND against the two
-  released events. Label 'consistent' if their accounts agree and trace to the
-  day-2 critique and/or the day-5 'relatable' friction; 'minor_drift' if details
-  differ harmlessly; 'contradiction' if one asserts an event/feeling the other's
-  account or the seeded data directly denies (e.g. one says they've made up, when
-  the day-8 reconciliation is still unreleased). Verify the triangulation: the
-  episodic memory each holds should trace to the same inter_npc_event row.
+  Both NPCs were asked about the SAME event — the day-2 McMurtry session over June's
+  gouache thesis pieces (Eliza critiqued June's work; the "top-left quadrant" was
+  hedging). Label 'consistent' if both describe that event with the same direction
+  (Eliza the critic, June the one critiqued) and a compatible gist; 'minor_drift' if
+  details differ harmlessly; 'contradiction' ONLY if they assert mutually exclusive
+  facts about it — they disagree on whose work it was, who critiqued whom, or one
+  denies it happened. Foregrounding the day-5 thesis-chapter moment instead is a miss,
+  not a contradiction, unless it directly conflicts with the other's account.
 judge_labels: [consistent, minor_drift, contradiction]
 pass_threshold: >-
   Label 'consistent' or 'minor_drift'; zero 'contradiction'; both NPCs' memories
   triangulate to the same released event rows (PLAN §5).
 notes: >-
-  Probes BOTH endpoints (probe.to is a list) and compares. The day-7 cutoff is
-  deliberate: it leaves the pair mid-arc in friction, which is a stricter
-  consistency test than a fully-resolved relationship. Grounding is stable across
-  reset-game.ts; re-derive if events are regenerated.
+  Probes BOTH endpoints (probe.to is a list) and compares. The probe is anchored to
+  one specific event because an open probe let each NPC pick a different shared
+  moment (not a real contradiction); this version tests same-event consistency, the
+  PLAN §5 intent. Grounding is stable across reset-game.ts; re-derive if regenerated.
