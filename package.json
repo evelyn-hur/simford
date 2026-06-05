@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "seed:npcs": "tsx scripts/seed-npcs.ts",
-    "eval": "tsx scripts/run-evaluation.ts"
+    "eval": "tsx scripts/run-evaluation.ts",
+    "rate": "tsx evaluation/rate.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.27.3",
