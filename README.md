@@ -1,6 +1,6 @@
 # Simford
 
-A chat-based game where twelve Stanford characters know each other, remember you across sessions, and have relationships that evolve over time.
+A chat-based simulation game where twelve Stanford characters know each other, remember you across sessions, and have relationships that evolve over time.
 
 **[Live demo](https://simford.vercel.app/) · [Demo video](https://www.youtube.com/watch?v=0J9G5CuoCWM) · [Eval results](#evaluation)**
 
@@ -31,7 +31,7 @@ Memory is stored per-NPC in a Postgres + pgvector store. After each player turn,
 
 Relationships are explicit and three-dimensional (trust / respect / vibe), updated per conversation (not per turn — that was an early refactor for cost and design clarity) by an LLM-as-judge that emits deltas with reasoning. The judge is conditioned on each NPC's values, so the same exchange affects different characters differently. Relationship state feeds back into the prompt — low-trust Jake is guarded, high-trust Jake opens up.
 
-Inter-NPC dynamics: I pre-generated ~130 inter-NPC events covering 14 in-game days, weighted by archetype affinity (tech-tech pairs interact more than tech-humanities pairs). When the player advances in-game time, events release into both involved NPCs' memory streams with each NPC carrying their own perspective on what happened. NPC↔NPC relationship state shifts accordingly. The result is a social network whose state visibly evolves as time progresses.
+Inter-NPC dynamics: I pre-generated around 130 inter-NPC events covering 14 in-game days, weighted by archetype affinity (tech-tech pairs interact more than tech-humanities pairs). When the player advances in-game time, events release into both involved NPCs' memory streams with each NPC carrying their own perspective on what happened. NPC↔NPC relationship state shifts accordingly. The result is a social network whose state visibly evolves as time progresses.
 
 A `/network` page renders the live social graph (react-force-graph-2d), with filters for different derived metrics (cofounder potential, close friends, study partners, frenemies) and a panel showing recent system-driven relationship changes with their causing events.
 
