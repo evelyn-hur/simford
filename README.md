@@ -1,6 +1,6 @@
 # Simford
 
-A chat-based game where twelve Stanford characters know each other, remember you across sessions, and have relationships that evolve over time. Built as my CS final project.
+A chat-based game where twelve Stanford characters know each other, remember you across sessions, and have relationships that evolve over time.
 
 **[Live demo](https://simford.vercel.app/) · [Demo video](https://www.youtube.com/watch?v=0J9G5CuoCWM) · [Eval results](#evaluation)**
 
