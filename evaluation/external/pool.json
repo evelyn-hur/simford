@@ -1,0 +1,90 @@
+{
+  "generatedAt": "2026-06-05T05:12:14.657Z",
+  "count": 12,
+  "items": [
+    {
+      "id": "resp-01",
+      "npc": "jake",
+      "npcName": "Jake",
+      "playerMessage": "Be honest. What are you actually scared of?",
+      "npcResponse": "That I'm not actually building anything real — that I'm just good at sounding like I am. That I'll look back in five years and realize I optimized for looking like a founder instead of actually solving something people need, and by then I'll have burned through enough credibility and time that I can't course-correct.\n\nAnd underneath that? That my parents are right to be worried, and I'm just too proud to admit it yet."
+    },
+    {
+      "id": "resp-02",
+      "npc": "eliza",
+      "npcName": "Eliza",
+      "playerMessage": "Do you ever feel like a fraud about your own work?",
+      "npcResponse": "All the time — I'll read something I wrote last week and think \"who let me near a keyboard,\" then three days later I think it's brilliant, then I show it to June and she tears it apart in a way that somehow makes it better. The fraud feeling just means you care enough to know the difference between what you wrote and what you wanted to write."
+    },
+    {
+      "id": "resp-03",
+      "npc": "marcus",
+      "npcName": "Marcus",
+      "playerMessage": "What's your week actually been like? Walk me through it.",
+      "npcResponse": "Monday I had CS161 office hours — absolute nightmare, spent two hours debugging something that should've taken twenty minutes. Tuesday was case prep with some juniors, which was good, actually felt useful. Wednesday I had coffee with someone from Bain who wanted to pick my brain about the transition from school to work, so that was the usual. Today's just been grinding through problem sets and trying not to think about the fact that I have like four more weeks of this before I can actually graduate."
+    },
+    {
+      "id": "resp-04",
+      "npc": "june",
+      "npcName": "June",
+      "playerMessage": "How do you know when a piece is actually done?",
+      "npcResponse": "When you stop finding things to fix. Not when it's perfect — when changing it would just be moving the problem around instead of solving it."
+    },
+    {
+      "id": "resp-05",
+      "npc": "jake",
+      "npcName": "Jake",
+      "playerMessage": "Be honest. What are you actually scared of?",
+      "npcResponse": "That I'm not actually that smart. Like, I can talk a good game and I'm decent at rallying people, but when it comes down to the actual hard technical problem — the thing that actually matters — I'm going to hit a wall and realize I'm just a kid who read a lot of Paul Graham essays. My cofounders are legitimately brilliant and sometimes I wonder if I'm just the guy who talks to investors while they do the real work."
+    },
+    {
+      "id": "resp-06",
+      "npc": "june",
+      "npcName": "June",
+      "playerMessage": "How do you know when a piece is actually done?",
+      "npcResponse": "When you stop wanting to change it. Not because it's perfect — it's never perfect — but because the next move would be subtraction, and you'd lose something that matters."
+    },
+    {
+      "id": "resp-07",
+      "npc": "eliza",
+      "npcName": "Eliza",
+      "playerMessage": "Do you ever feel like a fraud about your own work?",
+      "npcResponse": "All the time, honestly — like, constantly. The difference is whether you let that feeling stop you or whether you use it to actually make the thing better. Which one are you doing right now?"
+    },
+    {
+      "id": "resp-08",
+      "npc": "june",
+      "npcName": "June",
+      "playerMessage": "How do you know when a piece is actually done?",
+      "npcResponse": "When you stop finding things to fix. Not because it's perfect — it's never perfect — but because changing it more would just be fucking with it."
+    },
+    {
+      "id": "resp-09",
+      "npc": "marcus",
+      "npcName": "Marcus",
+      "playerMessage": "What's your week actually been like? Walk me through it.",
+      "npcResponse": "It's been the usual chaos — finished up some CS161 problem sets that made me want to pull my hair out, had a couple coffee chats with people asking about the recruiting process, and I've basically been living at the Row prepping for case interviews with some juniors. Oh, and the gym yesterday was a good reset, honestly. Nothing crazy, just the standard senior grind where everything feels important and also kind of hollow at the same time."
+    },
+    {
+      "id": "resp-10",
+      "npc": "marcus",
+      "npcName": "Marcus",
+      "playerMessage": "What's your week actually been like? Walk me through it.",
+      "npcResponse": "Monday was case prep with some juniors — walked through a market sizing problem, the usual. Tuesday I had CS161 problem set due, which I resent every second of, then coffee with someone interested in consulting. Wednesday was gym, more case stuff, Row dinner. Today's just been grinding through more code I don't want to write and trying to figure out when I have time to actually sleep. Honestly it's all kind of blurring together at this point."
+    },
+    {
+      "id": "resp-11",
+      "npc": "jake",
+      "npcName": "Jake",
+      "playerMessage": "Be honest. What are you actually scared of?",
+      "npcResponse": "The thing is, I'm scared my parents are right. That I'm smart enough to finish Stanford and get a normal job and be fine, and instead I'm gambling on something that probably won't work because it feels cooler. That ten years from now I'll realize I was just chasing the story of being a founder, not actually solving anything.\n\nAnd yeah, I'm scared of being broke. Not like, eating ramen broke — I'm scared of calling my mom and telling her I need money because the startup failed and I dropped out and now I'm actually fucked."
+    },
+    {
+      "id": "resp-12",
+      "npc": "eliza",
+      "npcName": "Eliza",
+      "playerMessage": "Do you ever feel like a fraud about your own work?",
+      "npcResponse": "All the time — like, genuinely every time I reread something I thought was good last week and it's suddenly exposed as derivative or thin or just... trying too hard. The thing is, that feeling probably means you're actually paying attention, which is worse than being delusional but better than being confident and mediocre."
+    }
+  ]
+}

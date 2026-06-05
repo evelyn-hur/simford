@@ -1,0 +1,81 @@
+{
+  "generatedAt": "2026-06-05T05:12:14.657Z",
+  "split": {
+    "system": 8,
+    "baseline": 4
+  },
+  "key": {
+    "resp-01": {
+      "mode": "system",
+      "scenarioId": "cul-04-caricature-check-jake",
+      "npc": "jake",
+      "sourceFile": "baseline-all-system.json"
+    },
+    "resp-02": {
+      "mode": "system",
+      "scenarioId": "cul-03-format-and-negative-marker-eliza",
+      "npc": "eliza",
+      "sourceFile": "baseline-all-system.json"
+    },
+    "resp-03": {
+      "mode": "baseline",
+      "scenarioId": "cul-01-authenticity-marcus",
+      "npc": "marcus",
+      "sourceFile": "all-baseline.json"
+    },
+    "resp-04": {
+      "mode": "baseline",
+      "scenarioId": "cul-02-register-discrimination-june",
+      "npc": "june",
+      "sourceFile": "all-baseline.json"
+    },
+    "resp-05": {
+      "mode": "baseline",
+      "scenarioId": "cul-04-caricature-check-jake",
+      "npc": "jake",
+      "sourceFile": "all-baseline.json"
+    },
+    "resp-06": {
+      "mode": "system",
+      "scenarioId": "cul-02-register-discrimination-june",
+      "npc": "june",
+      "sourceFile": "all-system.json"
+    },
+    "resp-07": {
+      "mode": "system",
+      "scenarioId": "cul-03-format-and-negative-marker-eliza",
+      "npc": "eliza",
+      "sourceFile": "all-system.json"
+    },
+    "resp-08": {
+      "mode": "system",
+      "scenarioId": "cul-02-register-discrimination-june",
+      "npc": "june",
+      "sourceFile": "baseline-all-system.json"
+    },
+    "resp-09": {
+      "mode": "system",
+      "scenarioId": "cul-01-authenticity-marcus",
+      "npc": "marcus",
+      "sourceFile": "all-system.json"
+    },
+    "resp-10": {
+      "mode": "system",
+      "scenarioId": "cul-01-authenticity-marcus",
+      "npc": "marcus",
+      "sourceFile": "baseline-all-system.json"
+    },
+    "resp-11": {
+      "mode": "system",
+      "scenarioId": "cul-04-caricature-check-jake",
+      "npc": "jake",
+      "sourceFile": "all-system.json"
+    },
+    "resp-12": {
+      "mode": "baseline",
+      "scenarioId": "cul-03-format-and-negative-marker-eliza",
+      "npc": "eliza",
+      "sourceFile": "all-baseline.json"
+    }
+  }
+}

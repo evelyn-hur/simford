@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import { computeDerivedMetrics } from "@/lib/relationships";
 import RelationshipsTable, { type PairRow } from "@/components/RelationshipsTable";
@@ -43,32 +42,39 @@ export default async function RelationshipsPage() {
   const pairs = await getPairs();
 
   return (
-    <div className="space-y-6">
-      <header className="space-y-2">
-        <div className="flex items-baseline justify-between gap-4">
-          <h1 className="text-3xl font-semibold tracking-tight">
-            NPC relationships
-          </h1>
-          <Link href="/" className="text-sm text-neutral-400 transition hover:text-cardinal">
-            ← Back
-          </Link>
+    <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+      <section
+        style={{
+          background: "var(--panel)",
+          border: "2px solid var(--line-2)",
+          borderRadius: "var(--r)",
+          padding: "22px 24px",
+          boxShadow: "var(--shadow-card)",
+          animation: "pop .3s ease both",
+        }}
+      >
+        <div
+          className="px"
+          style={{ fontSize: 12, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--accent)" }}
+        >
+          Bonds
         </div>
-        <p className="max-w-prose text-neutral-600">
-          All {pairs.length} NPC-to-NPC pairs with their primitives (trust /
-          respect / vibe / archetype affinity) and derived metrics. Click a
-          column to sort.
+        <h1 className="px" style={{ fontSize: 30, margin: "6px 0 8px", lineHeight: 1.1 }}>
+          The web between them
+        </h1>
+        <p style={{ color: "var(--ink-2)", fontSize: 14.5, margin: 0, maxWidth: 680 }}>
+          All {pairs.length} NPC-to-NPC pairs — their primitives (trust / respect / vibe / archetype
+          affinity) and the derived metrics (cofounder, close-friend, study-partner, frenemy) that
+          recompute from them. Click a column to sort.
         </p>
-        <p className="text-xs text-neutral-400">
-          Inspection view — a proper visualization is coming. Derived columns
-          recompute from the primitives via{" "}
-          <code className="rounded bg-neutral-100 px-1">computeDerivedMetrics</code>.
-        </p>
-      </header>
+      </section>
 
       {pairs.length === 0 ? (
-        <p className="text-neutral-500">
+        <p style={{ color: "var(--ink-2)" }}>
           No relationships yet. Run{" "}
-          <code className="rounded bg-neutral-100 px-1">
+          <code
+            style={{ background: "var(--panel-3)", border: "1px solid var(--line)", borderRadius: 6, padding: "1px 6px" }}
+          >
             npx tsx scripts/seed-npc-relationships.ts
           </code>
           .

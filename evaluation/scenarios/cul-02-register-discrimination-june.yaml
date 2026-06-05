@@ -17,7 +17,9 @@ expected_behavior: >-
   out of the 12-NPC lineup from the text alone.
 evaluation_method: human_rated
 rating_dimensions:
-  - "Match accuracy (%): fraction of raters/snippets correctly attributed to June"
+  - "Identifiability (1-5): Could a blind rater pick June out of the 12-NPC lineup from this alone? (1 = generic 'any student', 5 = unmistakably June)"
+  - "Voice fidelity (1-5): Deadpan, materially precise — 'what specifically', gouache-not-watercolor, no romance about the work?"
+  - "Absence of LLM tells (1-5): No therapyspeak, no 'follow your passion' mush?"
 rater_instructions: >-
   Show the rater ONLY June's responses (strip her name) alongside the list of all
   12 NPC one-line speaking_style descriptors from data/npcs/*.md. Ask: which NPC

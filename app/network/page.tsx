@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import NetworkGraph, {
   type NetworkData,
   type NetworkEdge,
@@ -211,30 +210,36 @@ export default function NetworkPage() {
   }, []);
 
   return (
-    <div className="space-y-6">
-      <header className="space-y-2">
-        <div className="flex items-baseline justify-between gap-4">
-          <h1 className="text-3xl font-semibold tracking-tight">
-            Stanford Society — Social Network
-          </h1>
-          <Link
-            href="/"
-            className="text-sm text-neutral-400 transition hover:text-cardinal"
-          >
-            ← Back
-          </Link>
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <section
+        style={{
+          background: "var(--panel)",
+          border: "2px solid var(--line-2)",
+          borderRadius: "var(--r)",
+          padding: "22px 24px",
+          boxShadow: "var(--shadow-card)",
+          animation: "pop .3s ease both",
+        }}
+      >
+        <div
+          className="px"
+          style={{ fontSize: 12, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--accent)" }}
+        >
+          Network
         </div>
-        <p className="max-w-prose text-neutral-600">
-          Each node is a student, colored by their world (tech, humanities &amp;
-          arts, pre-professional, athlete, wild card). Lines show how a pair
-          feels about each other — thicker, darker lines mean a stronger tie
-          (trust, respect, and vibe combined). Drag nodes to rearrange, scroll
-          to zoom, click-drag the background to pan.
+        <h1 className="px" style={{ fontSize: 30, margin: "6px 0 8px", lineHeight: 1.1 }}>
+          The social graph
+        </h1>
+        <p style={{ color: "var(--ink-2)", fontSize: 14.5, margin: 0, maxWidth: 700 }}>
+          Each node is a student, colored by their world (tech, humanities &amp; arts,
+          pre-professional, athlete, wild card). Lines show how a pair feels about each other —
+          thicker, darker lines mean a stronger tie. Drag nodes to rearrange, scroll to zoom,
+          click-drag the background to pan.
         </p>
-      </header>
+      </section>
 
       {/* Lens / filter control */}
-      <div className="flex flex-wrap items-center gap-2">
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
         {FILTERS.map((f) => {
           const active = f.key === mode;
           return (
@@ -243,11 +248,17 @@ export default function NetworkPage() {
               onClick={() => setMode(f.key)}
               title={f.hint}
               aria-pressed={active}
-              className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
-                active
-                  ? "border-cardinal bg-cardinal/10 text-cardinal"
-                  : "border-neutral-200 text-neutral-600 hover:border-neutral-300 hover:text-neutral-900"
-              }`}
+              className="px"
+              style={{
+                fontSize: 12,
+                padding: "6px 13px",
+                borderRadius: 20,
+                cursor: "pointer",
+                border: "2px solid " + (active ? "var(--accent-2)" : "var(--line-2)"),
+                background: active ? "var(--accent)" : "var(--panel)",
+                color: active ? "var(--accent-ink)" : "var(--ink-2)",
+                transition: "background .15s, color .15s",
+              }}
             >
               {f.label}
             </button>
@@ -265,16 +276,28 @@ export default function NetworkPage() {
           role="switch"
           aria-checked={showPlayer}
           title="Show the player node and your relationships"
-          className={`ml-auto inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition ${
-            showPlayer
-              ? "border-cardinal bg-cardinal/10 text-cardinal"
-              : "border-neutral-200 text-neutral-500 hover:border-neutral-300 hover:text-neutral-900"
-          }`}
+          className="px"
+          style={{
+            marginLeft: "auto",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 7,
+            fontSize: 12,
+            padding: "6px 13px",
+            borderRadius: 20,
+            cursor: "pointer",
+            border: "2px solid " + (showPlayer ? "var(--accent-2)" : "var(--line-2)"),
+            background: showPlayer ? "var(--accent-soft)" : "var(--panel)",
+            color: showPlayer ? "var(--accent-2)" : "var(--ink-3)",
+          }}
         >
           <span
-            className={`inline-block h-2 w-2 rounded-full ${
-              showPlayer ? "bg-cardinal" : "bg-neutral-300"
-            }`}
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: "50%",
+              background: showPlayer ? "var(--accent)" : "var(--line-2)",
+            }}
           />
           Show player
         </button>
@@ -282,16 +305,23 @@ export default function NetworkPage() {
 
       {/* Time slider — scrub relationship history day by day */}
       {timeline && timeline.currentDay >= 2 && day != null && (
-        <div className="rounded-xl border border-neutral-200 bg-white p-3 shadow-sm">
-          <div className="mb-1.5 flex items-baseline justify-between text-xs">
-            <span className="font-medium text-neutral-600">In-game day</span>
+        <div
+          style={{
+            background: "var(--panel)",
+            border: "2px solid var(--line-2)",
+            borderRadius: 14,
+            boxShadow: "var(--shadow-card)",
+            padding: "12px 14px",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 7 }}>
             <span
-              className={
-                isLive
-                  ? "font-semibold text-cardinal"
-                  : "font-semibold text-neutral-700"
-              }
+              className="px"
+              style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 0.6, color: "var(--ink-2)" }}
             >
+              In-game day
+            </span>
+            <span className="px tnum" style={{ fontSize: 13, color: isLive ? "var(--accent)" : "var(--ink)" }}>
               {isLive ? `Day ${timeline.currentDay} · live` : `Day ${day}`}
             </span>
           </div>
@@ -305,7 +335,7 @@ export default function NetworkPage() {
             aria-label="In-game day"
             className="w-full accent-cardinal"
           />
-          <div className="mt-0.5 flex justify-between text-[10px] text-neutral-400">
+          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 2, fontSize: 10, color: "var(--ink-3)" }}>
             <span>Day 1</span>
             <span>Day {timeline.currentDay} · live</span>
           </div>
@@ -313,11 +343,19 @@ export default function NetworkPage() {
       )}
 
       {error ? (
-        <p className="rounded-lg bg-cardinal/5 px-3 py-2 text-sm text-cardinal">
+        <p
+          style={{
+            background: "var(--accent-soft)",
+            color: "var(--accent-2)",
+            borderRadius: 10,
+            padding: "8px 12px",
+            fontSize: 13,
+          }}
+        >
           Failed to load network: {error}
         </p>
       ) : !graph ? (
-        <p className="text-sm text-neutral-400">Loading network…</p>
+        <p style={{ color: "var(--ink-3)", fontSize: 13 }}>Loading network…</p>
       ) : (
         <NetworkGraph
           nodes={graph.nodes}

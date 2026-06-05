@@ -31,7 +31,7 @@ export default function RestartButton() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="text-neutral-500 transition hover:text-cardinal"
+        className="px text-[12px] text-ink-3 transition hover:text-accent"
       >
         Restart
       </button>

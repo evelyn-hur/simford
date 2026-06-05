@@ -1,23 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  computeDerivedMetrics,
-  rankDerivedMetrics,
-  type MetricBand,
-} from "@/lib/relationshipMetrics";
+import { computeDerivedMetrics, rankDerivedMetrics } from "@/lib/relationshipMetrics";
+import { Meter, BandTag } from "@/components/pixel";
 
 export interface RelationshipScores {
   trust: number;
   respect: number;
   vibe: number;
 }
-
-const BAND_BADGE: Record<MetricBand, string> = {
-  high: "bg-cardinal/15 text-cardinal",
-  medium: "bg-neutral-200 text-neutral-600",
-  low: "bg-neutral-100 text-neutral-400",
-};
 
 interface RelEvent {
   delta_trust: number;
@@ -29,10 +20,6 @@ interface RelEvent {
 
 const DIMS = ["trust", "respect", "vibe"] as const;
 type Dim = (typeof DIMS)[number];
-
-function pct(n: number): number {
-  return Math.round(Math.min(1, Math.max(0, n)) * 100);
-}
 
 function fmtDelta(n: number): string {
   return `${n >= 0 ? "+" : ""}${n.toFixed(2)}`;
@@ -146,134 +133,129 @@ export default function RelationshipPanel({
   const firstName = npcName.split(/\s+/)[0] || npcName;
 
   return (
-    <aside className="shrink-0 lg:w-80">
-      <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">
-          Relationship with {firstName}
+    <div
+      style={{
+        background: "var(--panel)",
+        border: "2px solid var(--line-2)",
+        borderRadius: "var(--r)",
+        boxShadow: "var(--shadow-card)",
+        padding: 14,
+      }}
+    >
+      <p
+        className="px"
+        style={{ fontSize: 12, letterSpacing: 0.6, textTransform: "uppercase", color: "var(--ink-2)", margin: "0 0 12px" }}
+      >
+        Relationship with {firstName}
+      </p>
+
+      {/* Meters */}
+      <div style={{ display: "grid", gap: 11 }}>
+        {DIMS.map((dim) => (
+          <Meter key={dim} dim={dim} value={scores[dim]} big flash={flash[dim]} />
+        ))}
+      </div>
+
+      {/* Derived "fun" metrics — top 3, recomputed from the live scores. */}
+      <div style={{ marginTop: 14, background: "var(--accent-soft)", borderRadius: 12, padding: "10px 12px" }}>
+        <p
+          className="px"
+          style={{ fontSize: 10, letterSpacing: 0.6, textTransform: "uppercase", color: "var(--ink-2)", margin: "0 0 7px" }}
+        >
+          What you could be
         </p>
-
-        {/* Meters */}
-        <div className="space-y-2.5">
-          {DIMS.map((dim) => {
-            const p = pct(scores[dim]);
-            return (
-              <div
-                key={dim}
-                className={`rounded-md px-1 py-0.5 transition ${
-                  flash[dim] ? "bg-cardinal/5 ring-1 ring-cardinal/30" : ""
-                }`}
-              >
-                <div className="flex items-center justify-between text-[11px] text-neutral-600">
-                  <span className="capitalize">{dim}</span>
-                  <span className="tabular-nums">{p}%</span>
-                </div>
-                <div className="mt-1 h-2 overflow-hidden rounded-full bg-neutral-200">
-                  <div
-                    className="h-full rounded-full bg-cardinal transition-[width] duration-700 ease-out"
-                    style={{ width: `${p}%` }}
-                  />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Derived "fun" metrics — top 3, recomputed from the live scores. */}
-        <div className="mt-3 rounded-lg bg-cardinal/5 px-3 py-2.5">
-          <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wide text-neutral-500">
-            What you could be
-          </p>
-          <div className="space-y-1">
-            {topMetrics.map((m) => (
-              <div
-                key={m.key}
-                className="flex items-center justify-between gap-2"
-              >
-                <span className="text-[11px] text-neutral-600">{m.label}</span>
-                <span className="flex items-center gap-1.5">
-                  <span className="text-[10px] tabular-nums text-neutral-400">
-                    {Math.round(m.score * 100)}
-                  </span>
-                  <span
-                    className={`rounded px-1.5 py-0.5 text-[10px] font-semibold capitalize ${BAND_BADGE[m.band]}`}
-                  >
-                    {m.band}
-                  </span>
+        <div style={{ display: "grid", gap: 6 }}>
+          {topMetrics.map((m) => (
+            <div key={m.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+              <span style={{ fontSize: 12, color: "var(--ink)" }}>{m.label}</span>
+              <span style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                <span className="tnum" style={{ fontSize: 10.5, color: "var(--ink-3)" }}>
+                  {Math.round(m.score * 100)}
                 </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Relationship history */}
-        <div className="mt-3 border-t border-neutral-200 pt-2">
-          <button
-            onClick={() => setHistoryOpen((o) => !o)}
-            className="flex w-full items-center justify-between text-[11px] font-medium text-neutral-500 transition hover:text-cardinal"
-            aria-expanded={historyOpen}
-          >
-            <span>Relationship history</span>
-            <span className="text-neutral-400">{historyOpen ? "−" : "+"}</span>
-          </button>
-
-          {historyOpen && (
-            <div className="mt-2 space-y-2">
-              <button
-                onClick={() => void loadHistory()}
-                disabled={loading}
-                className="text-[10px] text-neutral-400 transition hover:text-cardinal disabled:opacity-50"
-              >
-                {loading ? "Loading…" : "Refresh"}
-              </button>
-
-              {events !== null && events.length === 0 && !loading && (
-                <p className="py-2 text-center text-[11px] text-neutral-400">
-                  No relationship changes yet.
-                </p>
-              )}
-
-              {events?.map((e, i) => {
-                const deltas: [Dim, number][] = [
-                  ["trust", e.delta_trust],
-                  ["respect", e.delta_respect],
-                  ["vibe", e.delta_vibe],
-                ];
-                return (
-                  <div
-                    key={i}
-                    className="rounded-md bg-white px-2.5 py-2 shadow-sm"
-                  >
-                    <div className="flex flex-wrap gap-x-2 gap-y-0.5 font-mono text-[10px]">
-                      {deltas.map(([dim, d]) => (
-                        <span
-                          key={dim}
-                          className={
-                            d > 0
-                              ? "text-emerald-600"
-                              : d < 0
-                                ? "text-cardinal"
-                                : "text-neutral-300"
-                          }
-                        >
-                          {cap(dim)} {fmtDelta(d)}
-                        </span>
-                      ))}
-                    </div>
-                    {e.reasoning && (
-                      <p className="mt-1 text-[11px] leading-relaxed text-neutral-600">
-                        {e.reasoning}
-                      </p>
-                    )}
-                    <p className="mt-1 text-[10px] text-neutral-300">
-                      {timeAgo(e.created_at)}
-                    </p>
-                  </div>
-                );
-              })}
+                <BandTag b={m.band} />
+              </span>
             </div>
-          )}
+          ))}
         </div>
       </div>
-    </aside>
+
+      {/* Relationship history */}
+      <div style={{ marginTop: 14, borderTop: "2px solid var(--line)", paddingTop: 10 }}>
+        <button
+          onClick={() => setHistoryOpen((o) => !o)}
+          aria-expanded={historyOpen}
+          className="px"
+          style={{
+            display: "flex",
+            width: "100%",
+            alignItems: "center",
+            justifyContent: "space-between",
+            fontSize: 11.5,
+            color: "var(--ink-2)",
+            background: "transparent",
+            cursor: "pointer",
+          }}
+        >
+          <span>Relationship history</span>
+          <span style={{ color: "var(--ink-3)" }}>{historyOpen ? "−" : "+"}</span>
+        </button>
+
+        {historyOpen && (
+          <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}>
+            <button
+              onClick={() => void loadHistory()}
+              disabled={loading}
+              style={{
+                alignSelf: "flex-start",
+                fontSize: 10.5,
+                color: "var(--ink-3)",
+                background: "transparent",
+                cursor: loading ? "default" : "pointer",
+                opacity: loading ? 0.5 : 1,
+              }}
+            >
+              {loading ? "Loading…" : "Refresh"}
+            </button>
+
+            {events !== null && events.length === 0 && !loading && (
+              <p style={{ textAlign: "center", fontSize: 11.5, color: "var(--ink-3)", padding: "6px 0" }}>
+                No relationship changes yet.
+              </p>
+            )}
+
+            {events?.map((e, i) => {
+              const deltas: [Dim, number][] = [
+                ["trust", e.delta_trust],
+                ["respect", e.delta_respect],
+                ["vibe", e.delta_vibe],
+              ];
+              return (
+                <div
+                  key={i}
+                  style={{ background: "var(--panel-2)", border: "1px solid var(--line)", borderRadius: 10, padding: "8px 11px" }}
+                >
+                  <div className="tnum" style={{ display: "flex", flexWrap: "wrap", gap: "2px 10px", fontSize: 10.5, fontWeight: 700 }}>
+                    {deltas.map(([dim, d]) => (
+                      <span
+                        key={dim}
+                        style={{ color: d > 0 ? "var(--good)" : d < 0 ? "var(--bad)" : "var(--ink-3)" }}
+                      >
+                        {cap(dim)} {fmtDelta(d)}
+                      </span>
+                    ))}
+                  </div>
+                  {e.reasoning && (
+                    <p style={{ marginTop: 5, fontSize: 11.5, lineHeight: 1.5, color: "var(--ink-2)" }}>
+                      {e.reasoning}
+                    </p>
+                  )}
+                  <p style={{ marginTop: 5, fontSize: 10, color: "var(--ink-3)" }}>{timeAgo(e.created_at)}</p>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

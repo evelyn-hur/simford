@@ -8,6 +8,63 @@ import MemoryPanel, { type MemoryUsed } from "@/components/MemoryPanel";
 import RelationshipPanel, {
   type RelationshipScores,
 } from "@/components/RelationshipPanel";
+import { Sprite, GameButton } from "@/components/pixel";
+
+/** Small bottom-aligned sprite bust beside an NPC bubble. */
+function MsgAvatar({ npcId }: { npcId: string }) {
+  return (
+    <div
+      style={{
+        flex: "0 0 auto",
+        width: 34,
+        height: 40,
+        borderRadius: 9,
+        background: "var(--panel-3)",
+        border: "1px solid var(--line)",
+        overflow: "hidden",
+        display: "flex",
+        alignItems: "flex-end",
+        justifyContent: "center",
+      }}
+    >
+      <Sprite id={npcId} scale={1.6} />
+    </div>
+  );
+}
+
+/** "NPC is typing" — sprite bust + three bobbing dots. */
+function TypingBubble({ npcId }: { npcId: string }) {
+  return (
+    <div style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
+      <MsgAvatar npcId={npcId} />
+      <div
+        style={{
+          background: "var(--panel-2)",
+          border: "1.5px solid var(--line)",
+          borderRadius: 14,
+          borderBottomLeftRadius: 5,
+          padding: "11px 14px",
+          display: "inline-flex",
+          gap: 5,
+        }}
+      >
+        {[0, 1, 2].map((i) => (
+          <span
+            key={i}
+            style={{
+              width: 7,
+              height: 7,
+              borderRadius: "50%",
+              background: "var(--ink-3)",
+              animation: "floaty .9s ease-in-out infinite",
+              animationDelay: `${i * 0.15}s`,
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function ChatClient({
   npcId,
@@ -209,13 +266,50 @@ export default function ChatClient({
   }, [conversationId]);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 pt-4 lg:flex-row">
-      {/* Chat column */}
-      <div className="flex min-w-0 flex-1 flex-col">
-        {/* Message list */}
-        <div className="flex-1 space-y-4 overflow-y-auto px-1 py-6">
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "minmax(0,1fr) 320px",
+        gap: 18,
+        alignItems: "start",
+        marginTop: 14,
+      }}
+    >
+      {/* Main chat panel */}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          minHeight: 480,
+          height: "calc(100vh - 210px)",
+          background: "var(--panel)",
+          border: "2px solid var(--line-2)",
+          borderRadius: "var(--r)",
+          boxShadow: "var(--shadow-card)",
+          overflow: "hidden",
+        }}
+      >
+        {/* Thread */}
+        <div
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            padding: "18px 18px 10px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 12,
+          }}
+        >
           {messages.length === 0 && (
-            <p className="py-12 text-center text-sm text-neutral-400">
+            <p
+              style={{
+                textAlign: "center",
+                color: "var(--ink-3)",
+                fontSize: 13,
+                fontStyle: "italic",
+                padding: "44px 0",
+              }}
+            >
               Say hello to start the conversation.
             </p>
           )}
@@ -236,30 +330,66 @@ export default function ChatClient({
                 dayChanged ||
                 convChanged) &&
               m.inGameDay != null;
+            const mine = m.role === "player";
+            // Sprite bust only on the first of a consecutive NPC run.
+            const showAvatar =
+              !mine && (showDivider || prev == null || prev.role !== "npc");
 
             return (
               <div key={i}>
                 {showDivider && m.inGameDay != null && (
-                  <div className="my-4 flex items-center gap-3 text-[11px] text-neutral-400">
-                    <div className="h-px flex-1 bg-neutral-200" />
-                    <span className="whitespace-nowrap">
-                      Day {m.inGameDay} · Week {weekOfQuarter(m.inGameDay)} of
-                      Fall Quarter
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      margin: "8px 0",
+                      color: "var(--ink-3)",
+                      fontSize: 11,
+                    }}
+                  >
+                    <div style={{ height: 2, flex: 1, background: "var(--line)", borderRadius: 2 }} />
+                    <span className="px" style={{ whiteSpace: "nowrap", letterSpacing: 0.4 }}>
+                      Day {m.inGameDay} · Week {weekOfQuarter(m.inGameDay)}
                     </span>
-                    <div className="h-px flex-1 bg-neutral-200" />
+                    <div style={{ height: 2, flex: 1, background: "var(--line)", borderRadius: 2 }} />
                   </div>
                 )}
                 <div
-                  className={`flex ${
-                    m.role === "player" ? "justify-end" : "justify-start"
-                  }`}
+                  style={{
+                    display: "flex",
+                    justifyContent: mine ? "flex-end" : "flex-start",
+                    alignItems: "flex-end",
+                    gap: 8,
+                  }}
                 >
+                  {!mine &&
+                    (showAvatar ? (
+                      <MsgAvatar npcId={npcId} />
+                    ) : (
+                      <div style={{ width: 34, flex: "0 0 auto" }} />
+                    ))}
                   <div
-                    className={`max-w-[75%] whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-                      m.role === "player"
-                        ? "bg-neutral-900 text-white"
-                        : "border border-neutral-200 bg-white text-neutral-800 shadow-sm"
-                    }`}
+                    style={{
+                      maxWidth: "76%",
+                      whiteSpace: "pre-wrap",
+                      fontSize: 13.5,
+                      lineHeight: 1.5,
+                      padding: "10px 14px",
+                      borderRadius: 15,
+                      ...(mine
+                        ? {
+                            background: "var(--accent)",
+                            color: "var(--accent-ink)",
+                            borderBottomRightRadius: 5,
+                          }
+                        : {
+                            background: "var(--panel-2)",
+                            color: "var(--ink)",
+                            border: "1.5px solid var(--line)",
+                            borderBottomLeftRadius: 5,
+                          }),
+                    }}
                   >
                     {m.content}
                   </div>
@@ -268,65 +398,84 @@ export default function ChatClient({
             );
           })}
 
-          {loading && (
-            <div className="flex justify-start">
-              <div className="rounded-2xl border border-neutral-200 bg-white px-4 py-2.5 text-sm text-neutral-400 shadow-sm">
-                <span className="inline-flex gap-1">
-                  <span className="animate-pulse">●</span>
-                  <span className="animate-pulse [animation-delay:150ms]">
-                    ●
-                  </span>
-                  <span className="animate-pulse [animation-delay:300ms]">
-                    ●
-                  </span>
-                </span>
-              </div>
-            </div>
-          )}
+          {loading && <TypingBubble npcId={npcId} />}
 
           <div ref={bottomRef} />
         </div>
 
         {error && (
-          <p className="mb-2 rounded-lg bg-cardinal/5 px-3 py-2 text-sm text-cardinal">
+          <div
+            style={{
+              margin: "0 14px 8px",
+              background: "var(--accent-soft)",
+              color: "var(--accent-2)",
+              borderRadius: 10,
+              padding: "8px 12px",
+              fontSize: 13,
+            }}
+          >
             {error}
-          </p>
+          </div>
         )}
 
         {/* Composer */}
-        <div className="border-t border-neutral-200 pt-4">
-          <div className="mb-2 flex justify-end">
-            <button
-              onClick={() => void sayGoodbye()}
-              disabled={sayingGoodbye || loading || sendsThisConversation === 0}
-              title="End this conversation and update the relationship"
-              className="rounded-lg px-2.5 py-1 text-xs font-medium text-neutral-500 transition hover:bg-neutral-100 hover:text-cardinal disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-neutral-500"
-            >
-              {sayingGoodbye ? "Saying goodbye…" : "Say goodbye 👋"}
-            </button>
-          </div>
-          <div className="flex items-end gap-3">
+        <div
+          style={{
+            borderTop: "2px solid var(--line)",
+            background: "var(--panel-2)",
+            padding: "12px 14px",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "flex-end", gap: 10 }}>
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={onKeyDown}
               rows={1}
-              placeholder="Type a message…"
-              className="max-h-40 flex-1 resize-none rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-cardinal/40 focus:ring-2 focus:ring-cardinal/10"
+              placeholder={`Message ${npcName}…`}
+              style={{
+                flex: 1,
+                resize: "none",
+                maxHeight: 160,
+                fontFamily: "var(--font-body), sans-serif",
+                fontSize: 14,
+                lineHeight: 1.45,
+                color: "var(--ink)",
+                background: "var(--panel)",
+                border: "2px solid var(--line-2)",
+                borderRadius: 12,
+                padding: "10px 14px",
+                outline: "none",
+              }}
             />
-            <button
-              onClick={() => void send()}
-              disabled={loading || !input.trim()}
-              className="rounded-xl bg-cardinal px-5 py-3 text-sm font-medium text-white transition hover:bg-cardinal/90 disabled:cursor-not-allowed disabled:opacity-40"
-            >
+            <GameButton primary onClick={() => void send()} disabled={loading || !input.trim()}>
               Send
+            </GameButton>
+          </div>
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
+            <button
+              onClick={() => void sayGoodbye()}
+              disabled={sayingGoodbye || loading || sendsThisConversation === 0}
+              title="End this conversation and update the relationship"
+              className="px text-[11.5px] text-ink-3 transition hover:text-accent disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-ink-3"
+            >
+              {sayingGoodbye ? "Saying goodbye…" : "Say goodbye 👋"}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Right column: stacked panels */}
-      <div className="flex shrink-0 flex-col gap-4 lg:w-80">
+      {/* Right rail */}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 14,
+          height: "calc(100vh - 210px)",
+          minHeight: 480,
+          overflowY: "auto",
+        }}
+      >
         <MemoryPanel npcName={npcName} memories={memoriesUsed} />
         <RelationshipPanel
           npcName={npcName}

@@ -1,34 +1,42 @@
-import Link from "next/link";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import { endStaleConversationsForPlayer } from "@/lib/conversations";
+import { getInGameDay } from "@/lib/gameState";
 import { DEV_PLAYER_ID } from "@/lib/dev";
-import NpcAvatar from "@/components/NpcAvatar";
+import CastCard, { type CastMember } from "@/components/CastCard";
 
 export const dynamic = "force-dynamic";
-
-interface CastMember {
-  id: string;
-  name: string;
-  archetype: string;
-  /** One-line voice flavor (from `speaking_style`). */
-  voiceTag: string;
-  /** Present only once the player has interacted (a relationship row exists). */
-  scores: { trust: number; respect: number; vibe: number } | null;
-  /** Number of past conversations that actually contain messages. */
-  conversationCount: number;
-}
 
 /**
  * Loose archetype groupings, in display order. NPC ids are matched against
  * these; any NPC not listed falls into a trailing "Everyone else" group so new
  * characters never silently disappear.
  */
-const GROUPS: { label: string; ids: string[] }[] = [
-  { label: "Tech-adjacent", ids: ["jake", "priya", "ben"] },
-  { label: "Humanities & Arts", ids: ["eliza", "june"] },
-  { label: "Pre-professional", ids: ["marcus", "alex", "maya"] },
-  { label: "Athletes", ids: ["dj", "sasha"] },
-  { label: "Wild cards", ids: ["theo", "riya"] },
+const GROUPS: { label: string; blurb: string; ids: string[] }[] = [
+  {
+    label: "Tech-adjacent",
+    blurb: "Builders and researchers from the CS crowd.",
+    ids: ["jake", "priya", "ben"],
+  },
+  {
+    label: "Humanities & Arts",
+    blurb: "Writers and makers who take the craft seriously.",
+    ids: ["eliza", "june"],
+  },
+  {
+    label: "Pre-professional",
+    blurb: "Heads down, eyes on the offer.",
+    ids: ["marcus", "alex", "maya"],
+  },
+  {
+    label: "Athletes",
+    blurb: "Two full-time lives at once.",
+    ids: ["dj", "sasha"],
+  },
+  {
+    label: "Wild cards",
+    blurb: "They don't fit a box, and they like it that way.",
+    ids: ["theo", "riya"],
+  },
 ];
 
 async function getCast(): Promise<CastMember[]> {
@@ -96,7 +104,9 @@ async function getCast(): Promise<CastMember[]> {
   }));
 }
 
-function groupCast(cast: CastMember[]): { label: string; members: CastMember[] }[] {
+function groupCast(
+  cast: CastMember[],
+): { label: string; blurb: string; members: CastMember[] }[] {
   const byId = new Map(cast.map((c) => [c.id, c]));
   const used = new Set<string>();
 
@@ -105,82 +115,45 @@ function groupCast(cast: CastMember[]): { label: string; members: CastMember[] }
       .map((id) => byId.get(id))
       .filter((m): m is CastMember => Boolean(m));
     members.forEach((m) => used.add(m.id));
-    return { label: g.label, members };
+    return { label: g.label, blurb: g.blurb, members };
   }).filter((g) => g.members.length > 0);
 
   const leftover = cast.filter((c) => !used.has(c.id));
-  if (leftover.length > 0) groups.push({ label: "Everyone else", members: leftover });
+  if (leftover.length > 0)
+    groups.push({ label: "Everyone else", blurb: "", members: leftover });
 
   return groups;
 }
 
-function ScoreBar({ label, value }: { label: string; value: number }) {
-  const pct = Math.round(Math.max(0, Math.min(1, value)) * 100);
+/** A small pixel stat chip used in the page header (Met X/12 · Day N). */
+function Stat({ value, label }: { value: string; label: string }) {
   return (
     <div
-      className="flex items-center gap-2"
-      aria-label={`${label}: ${pct} percent`}
+      style={{
+        background: "var(--panel-2)",
+        border: "1.5px solid var(--line)",
+        borderRadius: 14,
+        padding: "9px 16px",
+        textAlign: "center",
+        minWidth: 64,
+      }}
     >
-      <span className="w-12 shrink-0 text-[11px] uppercase tracking-wide text-neutral-400">
+      <div className="px tnum" style={{ fontSize: 20, color: "var(--accent)", lineHeight: 1 }}>
+        {value}
+      </div>
+      <div
+        className="px"
+        style={{
+          fontSize: 9.5,
+          letterSpacing: 0.8,
+          textTransform: "uppercase",
+          color: "var(--ink-3)",
+          marginTop: 4,
+        }}
+      >
         {label}
-      </span>
-      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-neutral-100">
-        <div
-          className="h-full rounded-full bg-cardinal/80"
-          style={{ width: `${pct}%` }}
-        />
       </div>
-      <span className="w-6 shrink-0 text-right text-[11px] tabular-nums text-neutral-400">
-        {pct}
-      </span>
     </div>
-  );
-}
-
-function NpcCard({ npc }: { npc: CastMember }) {
-  const { scores, conversationCount } = npc;
-  return (
-    <Link
-      href={`/chat/${npc.id}`}
-      className="group flex h-full flex-col gap-3 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-cardinal/30 hover:shadow-md"
-    >
-      <div className="flex items-center gap-3">
-        <NpcAvatar name={npc.name} size="md" />
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-medium text-neutral-900">{npc.name}</p>
-          <p className="truncate text-sm text-neutral-500">{npc.archetype}</p>
-        </div>
-      </div>
-
-      {npc.voiceTag && (
-        <p className="line-clamp-2 text-sm italic leading-snug text-neutral-500">
-          &ldquo;{npc.voiceTag}&rdquo;
-        </p>
-      )}
-
-      <div className="mt-auto space-y-3 pt-1">
-        {scores ? (
-          <div className="space-y-1.5">
-            <ScoreBar label="Trust" value={scores.trust} />
-            <ScoreBar label="Respect" value={scores.respect} />
-            <ScoreBar label="Vibe" value={scores.vibe} />
-          </div>
-        ) : conversationCount === 0 ? (
-          <p className="text-xs text-neutral-400">You haven&rsquo;t met yet</p>
-        ) : null}
-
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-neutral-400">
-            {conversationCount > 0
-              ? `${conversationCount} conversation${conversationCount === 1 ? "" : "s"}`
-              : ""}
-          </span>
-          <span className="text-sm font-medium text-cardinal opacity-0 transition group-hover:opacity-100">
-            {conversationCount > 0 ? "Continue →" : "Start →"}
-          </span>
-        </div>
-      </div>
-    </Link>
   );
 }
 
@@ -194,22 +167,59 @@ export default async function Home() {
     console.error("Home: stale-conversation sweep failed:", err),
   );
 
-  const cast = await getCast();
+  const [cast, day] = await Promise.all([getCast(), getInGameDay(DEV_PLAYER_ID)]);
   const groups = groupCast(cast);
+  const metCount = cast.filter((c) => c.scores != null).length;
 
   return (
-    <div className="space-y-10">
-      <header className="space-y-2">
-        <h1 className="text-3xl font-semibold tracking-tight">Simford</h1>
-        <p className="max-w-prose text-neutral-600">
-          Pick someone to talk to. Conversations are remembered.
-        </p>
-      </header>
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <section
+        style={{
+          background: "var(--panel)",
+          border: "2px solid var(--line-2)",
+          borderRadius: "var(--r)",
+          padding: "22px 24px",
+          boxShadow: "var(--shadow-card)",
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 20,
+          alignItems: "flex-end",
+          justifyContent: "space-between",
+          animation: "pop .3s ease both",
+        }}
+      >
+        <div style={{ maxWidth: 560 }}>
+          <div
+            className="px"
+            style={{ fontSize: 12, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--accent)" }}
+          >
+            The Cast
+          </div>
+          <h1 className="px" style={{ fontSize: 30, margin: "6px 0 8px", lineHeight: 1.1 }}>
+            Who are you talking to today?
+          </h1>
+          <p style={{ color: "var(--ink-2)", fontSize: 14.5, margin: 0 }}>
+            Pick someone to talk to. Every conversation is remembered — they&rsquo;ll bring
+            up what you said last time.
+          </p>
+        </div>
+        <div style={{ display: "flex", gap: 10 }}>
+          <Stat value={`${metCount}/${cast.length}`} label="Met" />
+          <Stat value={`${day}`} label="Day" />
+        </div>
+      </section>
 
       {cast.length === 0 && (
-        <p className="text-neutral-500">
+        <p style={{ color: "var(--ink-2)", marginTop: 18 }}>
           No NPCs yet. Run{" "}
-          <code className="rounded bg-neutral-100 px-1">
+          <code
+            style={{
+              background: "var(--panel-3)",
+              border: "1px solid var(--line)",
+              borderRadius: 6,
+              padding: "1px 6px",
+            }}
+          >
             npx tsx scripts/seed-npcs.ts
           </code>
           .
@@ -217,13 +227,41 @@ export default async function Home() {
       )}
 
       {groups.map((group) => (
-        <section key={group.label} className="space-y-4">
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-neutral-400">
-            {group.label}
-          </h2>
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <section key={group.label} style={{ marginTop: 26 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "baseline",
+              gap: 12,
+              marginBottom: 14,
+              flexWrap: "wrap",
+            }}
+          >
+            <h2
+              className="px"
+              style={{
+                fontSize: 14,
+                textTransform: "uppercase",
+                letterSpacing: 1.2,
+                margin: 0,
+                whiteSpace: "nowrap",
+              }}
+            >
+              {group.label}
+            </h2>
+            {group.blurb && (
+              <span style={{ fontSize: 12.5, color: "var(--ink-3)" }}>{group.blurb}</span>
+            )}
+          </div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(310px, 1fr))",
+              gap: 16,
+            }}
+          >
             {group.members.map((npc) => (
-              <NpcCard key={npc.id} npc={npc} />
+              <CastCard key={npc.id} npc={npc} />
             ))}
           </div>
         </section>

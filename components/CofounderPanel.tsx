@@ -37,54 +37,67 @@ export default function CofounderPanel({
   onSelect: (pair: CofounderPair) => void;
 }) {
   return (
-    <section className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
-      <div className="flex items-baseline justify-between gap-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-700">
+    <section
+      style={{
+        background: "var(--panel)",
+        border: "2px solid var(--line-2)",
+        borderRadius: "var(--r)",
+        boxShadow: "var(--shadow-card)",
+        padding: 18,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
+        <h2 className="px" style={{ fontSize: 13, textTransform: "uppercase", letterSpacing: 1, margin: 0, color: "var(--ink)" }}>
           Top Cofounder Pairs
         </h2>
-        <span className="text-[11px] text-neutral-400">respect-weighted</span>
+        <span style={{ fontSize: 11, color: "var(--ink-3)" }}>respect-weighted</span>
       </div>
 
       {error ? (
-        <p className="mt-3 text-sm text-cardinal">Couldn’t load pairs: {error}</p>
+        <p style={{ marginTop: 12, fontSize: 13, color: "var(--accent-2)" }}>Couldn&rsquo;t load pairs: {error}</p>
       ) : loading || pairs === null ? (
-        <div className="mt-3 space-y-2">
+        <div style={{ marginTop: 12, display: "grid", gap: 8 }}>
           {[0, 1, 2].map((i) => (
             <div
               key={i}
-              className="h-[88px] animate-pulse rounded-xl bg-neutral-100"
+              className="animate-pulse"
+              style={{ height: 88, borderRadius: 12, background: "var(--panel-3)" }}
             />
           ))}
         </div>
       ) : pairs.length === 0 ? (
-        <p className="mt-3 text-sm text-neutral-500">No pairs yet.</p>
+        <p style={{ marginTop: 12, fontSize: 13, color: "var(--ink-2)" }}>No pairs yet.</p>
       ) : (
-        <ol className="mt-3 space-y-2">
+        <ol style={{ marginTop: 12, display: "grid", gap: 8, listStyle: "none", padding: 0 }}>
           {pairs.map((p, i) => {
             const active = samePair(p, selectedPair);
             return (
               <li key={`${p.a}-${p.b}`}>
                 <button
                   onClick={() => onSelect(p)}
-                  className={`w-full rounded-xl border p-3 text-left transition ${
-                    active
-                      ? "border-cardinal/40 bg-cardinal/5"
-                      : "border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50"
-                  }`}
+                  style={{
+                    width: "100%",
+                    textAlign: "left",
+                    borderRadius: 12,
+                    padding: 12,
+                    cursor: "pointer",
+                    border: "2px solid " + (active ? "var(--accent-2)" : "var(--line-2)"),
+                    background: active ? "var(--accent-soft)" : "var(--panel-2)",
+                    transition: "border-color .15s, background .15s",
+                  }}
                 >
-                  <div className="flex items-baseline justify-between gap-3">
-                    <span className="min-w-0 truncate text-sm font-medium text-neutral-900">
-                      <span className="mr-1.5 text-xs text-neutral-400">
+                  <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
+                    <span style={{ minWidth: 0, fontSize: 14, fontWeight: 600, color: "var(--ink)" }}>
+                      <span className="px" style={{ marginRight: 6, fontSize: 12, color: "var(--ink-3)" }}>
                         {i + 1}.
                       </span>
-                      {p.aName}{" "}
-                      <span className="text-neutral-300">↔</span> {p.bName}
+                      {p.aName} <span style={{ color: "var(--ink-3)" }}>↔</span> {p.bName}
                     </span>
-                    <span className="shrink-0 text-lg font-semibold tabular-nums text-cardinal">
+                    <span className="px tnum" style={{ flexShrink: 0, fontSize: 18, color: "var(--accent)" }}>
                       {pct(p.cofounder_score)}
                     </span>
                   </div>
-                  <div className="mt-1 flex flex-wrap gap-x-3 text-[11px] tabular-nums text-neutral-500">
+                  <div className="tnum" style={{ marginTop: 5, display: "flex", flexWrap: "wrap", gap: "0 12px", fontSize: 11, color: "var(--ink-3)" }}>
                     <span>Trust {pct(p.trust)}</span>
                     <span>Respect {pct(p.respect)}</span>
                     <span>Vibe {pct(p.vibe)}</span>

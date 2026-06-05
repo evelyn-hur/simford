@@ -2,12 +2,135 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ===================== THEME TOKENS (cozy pixel-art reskin) ===================== */
 :root {
-  --background: #ffffff;
-  --foreground: #0a0a0a;
+  --bg: #efe4d2;
+  --bg-2: #e8dbc5;
+  --panel: #fffaf0;
+  --panel-2: #f7eedd;
+  --panel-3: #f0e4cf;
+  --ink: #2f2823;
+  --ink-2: #6f604e;
+  --ink-3: #a4906f;
+  --line: #e3d3b2;
+  --line-2: #cdb486;
+  --accent: #8c1515;
+  --accent-2: #a8302b;
+  --accent-ink: #fff8f0;
+  --accent-soft: rgba(140, 21, 21, 0.1);
+  --trust: #5b82a8;
+  --respect: #c08a2e;
+  --vibe: #579468;
+  --good: #4f9466;
+  --bad: #b14a3c;
+  --shadow-card: 0 1px 0 #fff inset, 0 10px 22px -12px rgba(47, 40, 35, 0.3);
+  --shadow-btn: 0 3px 0 var(--line-2), 0 6px 12px -6px rgba(47, 40, 35, 0.35);
+  --shadow-btn-accent: 0 3px 0 var(--accent-2), 0 6px 12px -6px rgba(140, 21, 21, 0.5);
+  --r: 18px;
+}
+
+[data-theme="dusk"] {
+  --bg: #201b19;
+  --bg-2: #272120;
+  --panel: #2e2825;
+  --panel-2: #352d29;
+  --panel-3: #3a312c;
+  --ink: #f3e9d9;
+  --ink-2: #c4b49d;
+  --ink-3: #8a7b67;
+  --line: #43392f;
+  --line-2: #574a3e;
+  --accent: #c5392e;
+  --accent-2: #dc5448;
+  --accent-ink: #fff5ef;
+  --accent-soft: rgba(197, 57, 46, 0.16);
+  --trust: #7aa0c4;
+  --respect: #d7a64c;
+  --vibe: #71ab82;
+  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 12px 26px -12px rgba(0, 0, 0, 0.6);
+  --shadow-btn: 0 3px 0 #201915, 0 6px 12px -6px rgba(0, 0, 0, 0.5);
+  --shadow-btn-accent: 0 3px 0 var(--accent-2), 0 6px 12px -6px rgba(0, 0, 0, 0.55);
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
+  font-family: var(--font-body), "Nunito", system-ui, sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+  background-image: radial-gradient(var(--line) 1px, transparent 1px);
+  background-size: 22px 22px;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.5;
+}
+
+::selection {
+  background: var(--accent-soft);
+}
+
+/* pixel display font helper */
+.px {
+  font-family: var(--font-pixel), "Pixelify Sans", monospace;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+html.no-pixel-heads .px {
+  font-family: var(--font-body), "Nunito", system-ui, sans-serif;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+canvas.sprite {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  display: block;
+}
+
+/* scrollbar */
+*::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--line-2);
+  border-radius: 20px;
+  border: 3px solid var(--bg);
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* fade/pop entrance + motion helpers */
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes floaty {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+@keyframes barfill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+  }
 }

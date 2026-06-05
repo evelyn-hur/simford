@@ -34,53 +34,64 @@ export default function RecentChangesPanel({
   error: string | null;
 }) {
   return (
-    <section className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
-      <div className="flex items-baseline justify-between gap-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-700">
+    <section
+      style={{
+        background: "var(--panel)",
+        border: "2px solid var(--line-2)",
+        borderRadius: "var(--r)",
+        boxShadow: "var(--shadow-card)",
+        padding: 18,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
+        <h2 className="px" style={{ fontSize: 13, textTransform: "uppercase", letterSpacing: 1, margin: 0, color: "var(--ink)" }}>
           Recent Network Changes
         </h2>
-        <span className="text-[11px] text-neutral-400">
-          off-screen events between students
-        </span>
+        <span style={{ fontSize: 11, color: "var(--ink-3)" }}>off-screen events between students</span>
       </div>
 
       {error ? (
-        <p className="mt-3 rounded-lg bg-cardinal/5 px-3 py-2 text-sm text-cardinal">
+        <p style={{ marginTop: 12, background: "var(--accent-soft)", color: "var(--accent-2)", borderRadius: 10, padding: "8px 12px", fontSize: 13 }}>
           Failed to load changes: {error}
         </p>
       ) : loading ? (
-        <p className="mt-3 text-sm text-neutral-400">Loading…</p>
+        <p style={{ marginTop: 12, fontSize: 13, color: "var(--ink-3)" }}>Loading…</p>
       ) : !changes || changes.length === 0 ? (
-        <p className="mt-3 text-sm text-neutral-400">
-          No off-screen events have been released yet — advance the in-game day
-          to let the network evolve.
+        <p style={{ marginTop: 12, fontSize: 13, color: "var(--ink-3)" }}>
+          No off-screen events have been released yet — advance the in-game day to let the network evolve.
         </p>
       ) : (
-        <ul className="mt-3 divide-y divide-neutral-100">
+        <ul style={{ marginTop: 12, listStyle: "none", padding: 0 }}>
           {changes.map((c, i) => (
-            <li key={i} className="py-2.5 first:pt-0 last:pb-0">
-              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+            <li key={i} style={{ padding: "10px 0", borderTop: i === 0 ? "none" : "1px solid var(--line)" }}>
+              <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: "4px 8px" }}>
                 {c.day != null && (
-                  <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-semibold text-violet-700">
+                  <span
+                    className="px"
+                    style={{ borderRadius: 20, background: "rgba(124,58,237,.14)", color: "#7c3aed", padding: "2px 9px", fontSize: 11 }}
+                  >
                     Day {c.day}
                   </span>
                 )}
-                <span className="text-sm font-medium text-neutral-800">
-                  {c.npcA.name} <span className="text-neutral-400">→</span>{" "}
-                  {c.npcB.name}
+                <span style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)" }}>
+                  {c.npcA.name} <span style={{ color: "var(--ink-3)" }}>→</span> {c.npcB.name}
                 </span>
-                <span className="ml-auto flex flex-wrap gap-1">
+                <span style={{ marginLeft: "auto", display: "flex", flexWrap: "wrap", gap: 4 }}>
                   {DIMS.map(({ key, label }) => {
                     const v = c.deltas[key];
                     if (!v) return null;
                     return (
                       <span
                         key={key}
-                        className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${
-                          v > 0
-                            ? "bg-emerald-50 text-emerald-700"
-                            : "bg-rose-50 text-rose-700"
-                        }`}
+                        className="tnum"
+                        style={{
+                          borderRadius: 6,
+                          padding: "1px 7px",
+                          fontSize: 11,
+                          fontWeight: 600,
+                          background: v > 0 ? "rgba(79,148,102,.16)" : "rgba(177,74,60,.16)",
+                          color: v > 0 ? "var(--good)" : "var(--bad)",
+                        }}
                       >
                         {label} {signed(v)}
                       </span>
@@ -89,11 +100,9 @@ export default function RecentChangesPanel({
                 </span>
               </div>
               {c.content && (
-                <p className="mt-1 text-sm leading-snug text-neutral-600">
-                  “{c.content}”
-                  {c.location && (
-                    <span className="text-neutral-400"> — {c.location}</span>
-                  )}
+                <p style={{ marginTop: 5, fontSize: 13.5, lineHeight: 1.45, color: "var(--ink-2)" }}>
+                  &ldquo;{c.content}&rdquo;
+                  {c.location && <span style={{ color: "var(--ink-3)" }}> — {c.location}</span>}
                 </p>
               )}
             </li>

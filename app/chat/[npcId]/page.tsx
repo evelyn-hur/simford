@@ -7,7 +7,7 @@ import {
 } from "@/lib/conversations";
 import { DEV_PLAYER_ID } from "@/lib/dev";
 import { getInGameDay } from "@/lib/gameState";
-import NpcAvatar from "@/components/NpcAvatar";
+import { SpriteStage } from "@/components/pixel";
 import ChatClient from "@/components/ChatClient";
 import GameClock from "@/components/GameClock";
 
@@ -52,27 +52,56 @@ export default async function ChatPage({
   const inGameDay = await getInGameDay(DEV_PLAYER_ID);
 
   return (
-    <div className="flex h-[calc(100vh-9rem)] flex-col">
-      {/* Header */}
-      <div className="flex items-center gap-4 border-b border-neutral-200 pb-4">
+    <div style={{ display: "flex", flexDirection: "column" }}>
+      {/* Chat header bar */}
+      <header
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 14,
+          background: "var(--panel)",
+          border: "2px solid var(--line-2)",
+          borderRadius: "var(--r)",
+          boxShadow: "var(--shadow-card)",
+          padding: "10px 16px",
+        }}
+      >
         <Link
           href="/"
-          className="text-sm text-neutral-400 transition hover:text-cardinal"
           aria-label="Back to all NPCs"
+          className="px"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: 38,
+            height: 38,
+            flex: "0 0 auto",
+            borderRadius: 11,
+            border: "2px solid var(--line-2)",
+            background: "var(--panel)",
+            color: "var(--ink)",
+            boxShadow: "var(--shadow-btn)",
+            textDecoration: "none",
+            fontSize: 16,
+          }}
         >
           ←
         </Link>
-        <NpcAvatar name={npc.name} size="md" />
-        <div className="min-w-0">
-          <p className="truncate font-semibold text-neutral-900">
+
+        <div style={{ flex: "0 0 auto" }}>
+          <SpriteStage id={npc.id} scale={2.4} pad={7} round={12} />
+        </div>
+
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div className="px" style={{ fontSize: 16, lineHeight: 1.15 }}>
             {npc.name}
-          </p>
-          <p className="truncate text-sm text-neutral-500">{npc.archetype}</p>
+          </div>
+          <div style={{ fontSize: 12.5, color: "var(--ink-2)" }}>{npc.archetype}</div>
         </div>
-        <div className="ml-auto">
-          <GameClock initialDay={inGameDay} conversationId={conversationId} />
-        </div>
-      </div>
+
+        <GameClock initialDay={inGameDay} conversationId={conversationId} />
+      </header>
 
       <ChatClient
         npcId={npc.id}

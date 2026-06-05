@@ -14,6 +14,8 @@ import {
   ARCHETYPE_GROUP_LABELS,
   type ArchetypeGroup,
 } from "@/lib/archetypes";
+import { SimSprite } from "@/lib/sprites/engine";
+import { SPRITE_CONFIGS } from "@/lib/sprites/configs";
 
 // react-force-graph-2d touches `window`/canvas at import time, so it must be
 // loaded client-only (no SSR). next/dynamic does NOT forward React refs, but we
@@ -76,12 +78,85 @@ export interface NetworkGraphProps {
 }
 
 const CARDINAL = "#8C1515";
-const CREAM = "#fbfaf7";
+const CREAM = "#fffaf0"; // matches the paper-panel token (--panel) so the canvas blends in
 // Accent for NPC↔NPC ties shifted by a released off-screen (system) event —
 // a violet that reads distinctly against every lens palette below.
 const SYSTEM_ACCENT: [number, number, number] = [124, 58, 237];
-const NODE_RADIUS = 5; // uniform medium
+const NODE_RADIUS = 13; // portrait token radius (graph units)
+const RING = "#cdb486"; // --line-2 (warm gold frame)
+const RING_HOVER = "#a4906f"; // --ink-3
+const INK = "#2f2823"; // --ink
 const GROUPS = Object.keys(ARCHETYPE_GROUP_LABELS) as ArchetypeGroup[];
+
+// Cache one rendered sprite canvas per NPC id (frame 0), drawn into each graph
+// node as a circular portrait. Module-level so it survives re-renders/lens swaps.
+const spritePortraitCache = new Map<string, HTMLCanvasElement>();
+function spritePortrait(id: string): HTMLCanvasElement | null {
+  if (typeof document === "undefined") return null;
+  const hit = spritePortraitCache.get(id);
+  if (hit) return hit;
+  const cfg = SPRITE_CONFIGS[id];
+  if (!cfg) return null;
+  const c = document.createElement("canvas");
+  SimSprite.render(c, cfg, 6, 0); // 6× → crisp 120×144 source
+  spritePortraitCache.set(id, c);
+  return c;
+}
+
+function roundRectPath(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number,
+) {
+  const rr = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + rr, y);
+  ctx.arcTo(x + w, y, x + w, y + h, rr);
+  ctx.arcTo(x + w, y + h, x, y + h, rr);
+  ctx.arcTo(x, y + h, x, y, rr);
+  ctx.arcTo(x, y, x + w, y, rr);
+  ctx.closePath();
+}
+
+// Minimal velocity-based collision force (a d3-force-shaped function with an
+// .initialize hook) so we don't pull in d3-force directly. Big portrait nodes
+// would otherwise overlap badly under link pull; this keeps every pair at least
+// a portrait-diameter apart. O(n²) but n ≈ 13, so trivially cheap.
+type SimNode = { x?: number; y?: number; vx?: number; vy?: number };
+interface SimForce {
+  (alpha: number): void;
+  initialize?: (nodes: SimNode[]) => void;
+}
+function collideForce(radius: number): SimForce {
+  let nodes: SimNode[] = [];
+  const min = radius * 2;
+  const force: SimForce = (alpha: number) => {
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const a = nodes[i];
+        const b = nodes[j];
+        const dx = (b.x ?? 0) - (a.x ?? 0);
+        const dy = (b.y ?? 0) - (a.y ?? 0);
+        const d2 = dx * dx + dy * dy;
+        if (d2 > 0 && d2 < min * min) {
+          const d = Math.sqrt(d2);
+          const push = ((min - d) / d) * alpha * 0.7;
+          a.vx = (a.vx ?? 0) - dx * push;
+          a.vy = (a.vy ?? 0) - dy * push;
+          b.vx = (b.vx ?? 0) + dx * push;
+          b.vy = (b.vy ?? 0) + dy * push;
+        }
+      }
+    }
+  };
+  force.initialize = (n: SimNode[]) => {
+    nodes = n;
+  };
+  return force;
+}
 
 const MODE_LABEL: Record<string, string> = {
   default: "Overall",
@@ -98,7 +173,7 @@ const MODE_CONFIG: Record<
   string,
   { rgb: [number, number, number]; keepTop: number }
 > = {
-  default: { rgb: [107, 114, 128], keepTop: 0.7 }, // gray
+  default: { rgb: [190, 158, 105], keepTop: 0.7 }, // warm tan (paper theme)
   cofounder: { rgb: [13, 148, 136], keepTop: 0.3 }, // teal
   close_friend: { rgb: [202, 138, 4], keepTop: 0.35 }, // warm gold
   study_partner: { rgb: [37, 99, 235], keepTop: 0.3 }, // blue
@@ -119,7 +194,7 @@ interface D3Force {
   distance?: (v: number) => D3Force;
 }
 interface ForceGraphInstance {
-  d3Force?: (name: string) => D3Force | undefined;
+  d3Force?: (name: string, force?: unknown) => D3Force | undefined;
   d3ReheatSimulation?: () => void;
   zoomToFit?: (durationMs?: number, padding?: number) => void;
 }
@@ -175,6 +250,9 @@ export default function NetworkGraph({
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [hoveredLink, setHoveredLink] = useState<GraphLink | null>(null);
   const [dimming, setDimming] = useState(false);
+  // Pixelify Sans family (from the --font-pixel CSS var) so node labels render in
+  // the pixel face on canvas; falls back to monospace until resolved.
+  const [pixelFont, setPixelFont] = useState("monospace");
   const height = 560;
 
   // Size the canvas to the container.
@@ -186,6 +264,19 @@ export default function NetworkGraph({
     const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => ro.disconnect();
+  }, []);
+
+  // Resolve the pixel font family once (and again after web fonts finish loading
+  // so labels repaint in Pixelify Sans rather than the monospace fallback).
+  useEffect(() => {
+    const read = () => {
+      const v = getComputedStyle(document.documentElement)
+        .getPropertyValue("--font-pixel")
+        .trim();
+      setPixelFont(v ? `${v}, monospace` : "monospace");
+    };
+    read();
+    document.fonts?.ready?.then(read).catch(() => {});
   }, []);
 
   // Copy so the force engine's in-place mutations don't touch parent state.
@@ -227,10 +318,13 @@ export default function NetworkGraph({
     fgRef.current = instance;
     if (!instance || configuredRef.current) return;
     configuredRef.current = true;
-    instance.d3Force?.("charge")?.strength?.(-280);
+    instance.d3Force?.("charge")?.strength?.(-340);
     const link = instance.d3Force?.("link");
-    link?.distance?.(75);
+    link?.distance?.(95);
     link?.strength?.((l: GraphLink) => linkForceStrength(l, mode, cutoff));
+    // Hard anti-overlap for the big portrait nodes (keeps centers ≥ a
+    // portrait-diameter apart regardless of how many links pull a node).
+    instance.d3Force?.("collide", collideForce(NODE_RADIUS + 9));
     instance.d3ReheatSimulation?.();
   };
 
@@ -276,7 +370,7 @@ export default function NetworkGraph({
     minZoom: 0.4,
     maxZoom: 6,
     cooldownTicks: 150,
-    onEngineStop: () => fgRef.current?.zoomToFit?.(400, 60),
+    onEngineStop: () => fgRef.current?.zoomToFit?.(400, 90),
 
     // ── Tooltips ────────────────────────────────────────────────────────────
     nodeLabel: (node: GraphNode) =>
@@ -371,36 +465,65 @@ export default function NetworkGraph({
     ) => {
       const x = node.x ?? 0;
       const y = node.y ?? 0;
+      const R = NODE_RADIUS;
       const selected = isHighlightedNode(node.id);
       const hovered = node.id === hoveredNodeId && !selected;
+      const isPlayer = node.id === PLAYER_ID;
 
-      // The player is a cardinal dot — same shape and size as the NPC discs,
-      // just colored cardinal so "you" stands out.
+      // Circular portrait token: cream backing, the NPC's pixel sprite clipped
+      // into the disc (the player is a plain cardinal token), then a framed ring.
+      ctx.save();
       ctx.beginPath();
-      ctx.arc(x, y, NODE_RADIUS, 0, 2 * Math.PI);
-      ctx.fillStyle =
-        node.id === PLAYER_ID
-          ? CARDINAL
-          : ARCHETYPE_GROUP_COLORS[node.archetypeGroup as ArchetypeGroup] ??
-            "#6b7280";
+      ctx.arc(x, y, R, 0, 2 * Math.PI);
+      ctx.fillStyle = isPlayer ? CARDINAL : CREAM;
       ctx.fill();
 
-      if (selected) {
-        ctx.lineWidth = 2 / globalScale;
-        ctx.strokeStyle = CARDINAL;
-        ctx.stroke();
-      } else if (hovered) {
-        ctx.lineWidth = 1.5 / globalScale;
-        ctx.strokeStyle = "rgba(120,120,120,0.8)";
-        ctx.stroke();
+      if (!isPlayer) {
+        const spr = spritePortrait(node.id);
+        if (spr) {
+          ctx.save();
+          ctx.clip();
+          ctx.imageSmoothingEnabled = false;
+          const drawH = R * 2.35;
+          const drawW = drawH * (SimSprite.W / SimSprite.H);
+          // Head near the top of the disc; feet crop off the bottom edge.
+          ctx.drawImage(spr, x - drawW / 2, y - R * 0.92, drawW, drawH);
+          ctx.restore();
+        } else {
+          ctx.fillStyle =
+            ARCHETYPE_GROUP_COLORS[node.archetypeGroup as ArchetypeGroup] ?? "#6b7280";
+          ctx.fill();
+        }
       }
 
-      const fontSize = 11 / globalScale;
-      ctx.font = `${fontSize}px ui-sans-serif, system-ui, sans-serif`;
+      // Frame ring (cardinal when selected, warm gold otherwise).
+      ctx.beginPath();
+      ctx.arc(x, y, R, 0, 2 * Math.PI);
+      ctx.lineWidth = selected ? 2.6 : hovered ? 2 : 1.4;
+      ctx.strokeStyle = selected ? CARDINAL : hovered ? RING_HOVER : RING;
+      ctx.stroke();
+      ctx.restore();
+
+      // Name label pill below, kept at a constant on-screen size.
+      const fontSize = 10 / globalScale;
+      ctx.font = `${fontSize}px ${pixelFont}`;
       ctx.textAlign = "center";
       ctx.textBaseline = "top";
-      ctx.fillStyle = selected ? CARDINAL : "#404040";
-      ctx.fillText(node.name, x, y + NODE_RADIUS + 1.5);
+      const padX = 5 / globalScale;
+      const padY = 2.5 / globalScale;
+      const tw = ctx.measureText(node.name).width;
+      const pillX = x - tw / 2 - padX;
+      const pillY = y + R + 4 / globalScale;
+      const pillW = tw + padX * 2;
+      const pillH = fontSize + padY * 2;
+      roundRectPath(ctx, pillX, pillY, pillW, pillH, 4 / globalScale);
+      ctx.fillStyle = CREAM;
+      ctx.fill();
+      ctx.lineWidth = 1 / globalScale;
+      ctx.strokeStyle = RING;
+      ctx.stroke();
+      ctx.fillStyle = selected ? CARDINAL : INK;
+      ctx.fillText(node.name, x, pillY + padY);
     },
     nodePointerAreaPaint: (
       node: GraphNode,
@@ -409,7 +532,7 @@ export default function NetworkGraph({
     ) => {
       ctx.fillStyle = color;
       ctx.beginPath();
-      ctx.arc(node.x ?? 0, node.y ?? 0, NODE_RADIUS + 2, 0, 2 * Math.PI);
+      ctx.arc(node.x ?? 0, node.y ?? 0, NODE_RADIUS + 1, 0, 2 * Math.PI);
       ctx.fill();
     },
   };
@@ -419,7 +542,7 @@ export default function NetworkGraph({
       <div
         ref={wrapRef}
         style={{ height, opacity: dimming ? 0.78 : 1 }}
-        className="overflow-hidden rounded-2xl border border-neutral-200 transition-opacity duration-300"
+        className="overflow-hidden rounded-card border-2 border-line-2 shadow-card transition-opacity duration-300"
       >
         {width > 0 && <ForceGraph2D {...graphProps} />}
       </div>
@@ -429,18 +552,18 @@ export default function NetworkGraph({
         {counts.map(({ group, n }) => (
           <span
             key={group}
-            className="inline-flex items-center gap-1.5 text-xs text-neutral-600"
+            className="inline-flex items-center gap-1.5 text-xs text-ink-2"
           >
             <span
               className="h-2.5 w-2.5 rounded-full"
               style={{ backgroundColor: ARCHETYPE_GROUP_COLORS[group] }}
             />
             {ARCHETYPE_GROUP_LABELS[group]}{" "}
-            <span className="text-neutral-400">({n})</span>
+            <span className="text-ink-3">({n})</span>
           </span>
         ))}
         {edges.some((e) => e.systemChanged) && (
-          <span className="inline-flex items-center gap-1.5 text-xs text-neutral-600">
+          <span className="inline-flex items-center gap-1.5 text-xs text-ink-2">
             <span
               className="h-2.5 w-2.5 rounded-full"
               style={{ backgroundColor: "#7c3aed" }}
@@ -449,7 +572,7 @@ export default function NetworkGraph({
           </span>
         )}
         {(selectedNodeId || selectedPair) && (
-          <span className="text-xs text-neutral-400">
+          <span className="text-xs text-ink-3">
             ·{" "}
             {selectedPair
               ? `${nameById.get(selectedPair.a) ?? selectedPair.a} ↔ ${
