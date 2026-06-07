@@ -2,7 +2,7 @@
 
 A chat-based simulation game where twelve Stanford characters know each other, remember you across sessions, and have relationships that evolve over time.
 
-**[Live demo](https://simford.vercel.app/) · [Demo video](https://www.youtube.com/watch?v=0J9G5CuoCWM) · [Eval results](#evaluation)**
+**[Live demo](https://simford.vercel.app/) · [Demo video](https://www.youtube.com/watch?v=bLPljJuLjfo) · [Eval results](#evaluation)**
 
 <img width="1470" height="825" alt="Screenshot 2026-06-05 at 12 40 53 AM" src="https://github.com/user-attachments/assets/3eb9ec34-8dea-4a37-9253-760635c944e4" />
 
